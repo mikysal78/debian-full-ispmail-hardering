@@ -42,7 +42,12 @@ harden_fail2ban: true
 fail2ban_bantime: "1h"
 fail2ban_findtime: "10m"
 fail2ban_maxretry: 5
-fail2ban_ignoreip: "127.0.0.1/8 ::1"
+fail2ban_ignoreip:            # IP/reti che fail2ban non bannerà mai
+  - "127.0.0.1/8"
+  - "::1"
+  # Aggiungi qui le tue reti fidate (IP fisso, VPN, ufficio, ecc.), es:
+  # - "203.0.113.10"
+  # - "10.20.0.0/16"
 
 # --- Kernel / sysctl -----------------------------------------------------
 harden_sysctl: true

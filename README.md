@@ -92,6 +92,24 @@ forzare i flag per singolo host in `host_vars/<nome-host>.yml`.
 Il ruolo `firewall` legge questi stessi flag per aprire automaticamente
 le porte giuste (80/443 per il web, 25/587/465/143/993 per la mail).
 
+## Whitelist fail2ban (IP/reti mai bannati)
+
+`fail2ban_ignoreip` in `group_vars/all.yml` è una lista di IP/reti CIDR
+che fail2ban ignora sempre, a prescindere dai tentativi falliti (utile
+per il tuo IP fisso, la rete d'ufficio o una VPN di gestione):
+
+```yaml
+fail2ban_ignoreip:
+  - "127.0.0.1/8"
+  - "::1"
+  - "203.0.113.10"      # il tuo IP fisso
+  - "10.20.0.0/16"       # es. rete VPN/ufficio
+```
+
+Nota: questa whitelist agisce solo su fail2ban. Se vuoi che anche il
+firewall (nftables) limiti la porta SSH alle sole reti fidate, usa
+`firewall_allow_ssh_from` con le stesse reti (vedi sezione precedente).
+
 ## Esecuzione
 
 ```bash

@@ -3,7 +3,7 @@
 bantime  = {{ fail2ban_bantime }}
 findtime = {{ fail2ban_findtime }}
 maxretry = {{ fail2ban_maxretry }}
-ignoreip = {{ fail2ban_ignoreip }}
+ignoreip = {{ fail2ban_ignoreip | join(' ') }}
 
 # Il firewall di questo host è gestito con nftables
 banaction = nftables-multiport
