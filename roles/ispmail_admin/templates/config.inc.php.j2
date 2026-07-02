@@ -37,5 +37,11 @@ define('IMA_CFG_QUOTA_STEP', 1073741824);
 /**
 ** Enable Blacklist (richiede la tabella blacklist_email, vedi README.txt
 ** del progetto se la abiliti: non viene creata automaticamente da questo ruolo)
+** ATTENZIONE: l'app controlla defined('IMA_SUPPORT_BLACKLIST'), non il suo
+** valore - va quindi omesso del tutto per disattivarlo, non definito a
+** false (altrimenti la app interroga blacklist_email anche se non esiste,
+** causando un errore 500 subito dopo il login).
 **/
-define('IMA_SUPPORT_BLACKLIST', {{ ispmail_admin_support_blacklist | lower }});
+{% if ispmail_admin_support_blacklist %}
+define('IMA_SUPPORT_BLACKLIST', true);
+{% endif %}
