@@ -1,0 +1,47 @@
+---
+- name: Verifica che sia stata configurata almeno una via d'accesso oltre a root/password
+  ansible.builtin.assert:
+    that:
+      - (harden_create_admin_user | default(false)) or (ssh_password_authentication == "yes")
+    fail_msg: >
+      Stai per disabilitare il login root e/o l'autenticazione via password senza aver
+      creato un utente admin con chiave pubblica (harden_create_admin_user=true).
+      Rischi di rimanere fuori dal server. Imposta harden_create_admin_user e
+      harden_admin_pubkey, oppure lascia temporaneamente ssh_password_authentication=yes.
+    quiet: true
+
+- name: Distribuisci sshd_config con hardening
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: "0600"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: restart sshd
+
+- name: Crea drop-in directory sshd_config.d (ripulisci override conflittuali)
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Genera/rinforza le host key SSH (rimuovi DSA, debole)
+  ansible.builtin.file:
+    path: /etc/ssh/ssh_host_dsa_key
+    state: absent
+
+- name: Genera/rinforza le host key SSH (rimuovi pubkey DSA)
+  ansible.builtin.file:
+    path: /etc/ssh/ssh_host_dsa_key.pub
+    state: absent
+
+- name: Permessi corretti sulle chiavi host SSH private
+  ansible.builtin.shell: |
+    set -o pipefail
+    chmod 600 /etc/ssh/ssh_host_*_key 2>/dev/null || true
+  args:
+    executable: /bin/bash
+  changed_when: false

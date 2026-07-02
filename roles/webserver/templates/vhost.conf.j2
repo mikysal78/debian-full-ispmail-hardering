@@ -1,0 +1,47 @@
+{{ ansible_managed | comment }}
+# Vhost di base per {{ item }}.
+# NOTA: se webserver_enable_tls=true, i certificati devono già esistere
+# (es. tramite certbot --nginx -d {{ item }}) prima che questo file sia valido:
+# in caso contrario commenta il blocco 443 finché non li generi.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ item }};
+
+{% if webserver_enable_tls %}
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name {{ item }};
+
+    ssl_certificate     /etc/letsencrypt/live/{{ item }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ item }}/privkey.pem;
+
+    root /var/www/{{ item }};
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+{% else %}
+    root /var/www/{{ item }};
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+{% endif %}
+
+    limit_req zone=req_limit_per_ip burst=20 nodelay;
+    limit_conn conn_limit_per_ip 20;
+}

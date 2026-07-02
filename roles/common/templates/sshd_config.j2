@@ -1,0 +1,66 @@
+{{ ansible_managed | comment }}
+# Configurazione SSH hardenizzata - Debian trixie
+
+Port {{ ssh_port }}
+AddressFamily any
+ListenAddress 0.0.0.0
+ListenAddress ::
+
+# --- Protocollo e algoritmi ---
+Protocol 2
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
+
+# --- Autenticazione ---
+PermitRootLogin {{ ssh_permit_root_login }}
+PasswordAuthentication {{ ssh_password_authentication }}
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+PermitEmptyPasswords no
+AuthenticationMethods publickey
+MaxAuthTries {{ ssh_max_auth_tries }}
+LoginGraceTime 30
+StrictModes yes
+IgnoreRhosts yes
+HostbasedAuthentication no
+{% if ssh_password_authentication == "no" %}
+AuthenticationMethods publickey
+{% endif %}
+
+{% if ssh_allow_users | length > 0 %}
+AllowUsers {{ ssh_allow_users | join(' ') }}
+{% endif %}
+{% if ssh_allow_groups | length > 0 %}
+AllowGroups {{ ssh_allow_groups | join(' ') }}
+{% endif %}
+
+# --- Sessione ---
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding no
+PermitTunnel no
+GatewayPorts no
+PermitUserEnvironment no
+Compression no
+TCPKeepAlive no
+ClientAliveInterval {{ ssh_client_alive_interval }}
+ClientAliveCountMax {{ ssh_client_alive_count_max }}
+MaxSessions 4
+MaxStartups 10:30:60
+
+# --- Logging e banner ---
+LogLevel VERBOSE
+SyslogFacility AUTH
+Banner /etc/issue.net
+PrintMotd no
+PrintLastLog yes
+
+UsePAM yes
+
+Subsystem sftp /usr/lib/openssh/sftp-server -l INFO
+
+Include /etc/ssh/sshd_config.d/*.conf

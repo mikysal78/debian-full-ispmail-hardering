@@ -1,0 +1,74 @@
+#!/usr/sbin/nft -f
+{{ ansible_managed | comment }}
+
+flush ruleset
+
+table inet filter {
+
+    chain input {
+        type filter hook input priority 0; policy {{ firewall_default_policy_input }};
+
+        # Traffico locale e connessioni già stabilite
+        iif "lo" accept
+        ct state established,related accept
+        ct state invalid drop
+
+{% if firewall_allow_icmp_echo %}
+        # Ping (rate-limited per evitare flood)
+        ip protocol icmp icmp type echo-request limit rate 10/second accept
+        ip6 nexthdr icmpv6 icmpv6 type echo-request limit rate 10/second accept
+{% endif %}
+        # ICMPv6 essenziale per il corretto funzionamento di IPv6
+        ip6 nexthdr icmpv6 icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit, nd-router-advert } accept
+
+{% if firewall_allow_ssh_from | length > 0 %}
+        # SSH ristretto alle sole sorgenti autorizzate
+{% for src in firewall_allow_ssh_from %}
+        ip saddr {{ src }} tcp dport {{ ssh_port }} ct state new limit rate 15/minute accept
+{% endfor %}
+{% else %}
+        # SSH aperto a tutti gli indirizzi, con rate limiting anti brute-force
+        # (fail2ban fornisce comunque una protezione aggiuntiva persistente)
+        tcp dport {{ ssh_port }} ct state new limit rate 15/minute accept
+{% endif %}
+
+{% if role_webserver | default(false) %}
+        # Web server (HTTP/HTTPS)
+        tcp dport { 80, 443 } ct state new accept
+{% endif %}
+
+{% if role_mailserver | default(false) %}
+        # Mail server: SMTP, submission, IMAPS, POP3S
+        tcp dport { 25 } ct state new accept
+{% if mail_enable_submission | default(true) %}
+        tcp dport { 587, 465 } ct state new accept
+{% endif %}
+        tcp dport { 143, 993 } ct state new accept
+{% if mail_enable_pop3 | default(false) %}
+        tcp dport { 110, 995 } ct state new accept
+{% endif %}
+{% endif %}
+
+{% if firewall_allowed_tcp_ports | length > 0 %}
+        # Porte TCP extra definite manualmente
+        tcp dport { {{ firewall_allowed_tcp_ports | join(', ') }} } ct state new accept
+{% endif %}
+{% if firewall_allowed_udp_ports | length > 0 %}
+        # Porte UDP extra definite manualmente
+        udp dport { {{ firewall_allowed_udp_ports | join(', ') }} } ct state new accept
+{% endif %}
+
+        # Tutto il resto viene loggato e scartato
+        limit rate 5/minute log prefix "nft-drop-input: " level info
+        counter drop
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+        counter drop
+    }
+
+    chain output {
+        type filter hook output priority 0; policy accept;
+    }
+}

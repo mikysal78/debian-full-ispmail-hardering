@@ -1,0 +1,63 @@
+---
+- name: Installa nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Rimuovi il sito di default
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx
+
+- name: Distribuisci configurazione nginx.conf hardenizzata
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "nginx -t -c %s"
+  notify: reload nginx
+
+- name: Distribuisci snippet di sicurezza (header, limiti)
+  ansible.builtin.template:
+    src: security-headers.conf.j2
+    dest: /etc/nginx/conf.d/security-headers.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload nginx
+
+- name: Crea la directory per i log dedicati
+  ansible.builtin.file:
+    path: /var/log/nginx
+    state: directory
+    owner: www-data
+    group: adm
+    mode: "0750"
+
+- name: Distribuisci vhost di esempio per i domini configurati
+  ansible.builtin.template:
+    src: vhost.conf.j2
+    dest: "/etc/nginx/sites-available/{{ item }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ webserver_domains }}"
+  notify: reload nginx
+
+- name: Abilita i vhost creati
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ item }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ item }}.conf"
+    state: link
+  loop: "{{ webserver_domains }}"
+  notify: reload nginx
+
+- name: Abilita e avvia nginx
+  ansible.builtin.systemd:
+    name: nginx
+    enabled: true
+    state: started

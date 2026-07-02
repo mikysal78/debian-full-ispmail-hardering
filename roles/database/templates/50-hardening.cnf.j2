@@ -1,0 +1,17 @@
+{{ ansible_managed | comment }}
+[mysqld]
+bind-address = {{ db_bind_address }}
+
+# Non esporre la versione esatta agli scanner
+skip-show-database
+
+# Evita che utenti locali leggano file arbitrari via LOAD DATA LOCAL
+local-infile = 0
+
+# Log delle query lente, utile per audit/performance
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/mariadb-slow.log
+log_error = /var/log/mysql/error.log
+
+# Limita le connessioni simultanee per singolo utente
+max_user_connections = 100

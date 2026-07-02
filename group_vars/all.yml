@@ -1,0 +1,132 @@
+---
+# =============================================================================
+# VARIABILI GLOBALI DI HARDENING - Debian trixie (13)
+# =============================================================================
+# Attiva/disattiva i vari blocchi impostando i booleani qui sotto.
+# Ogni ruolo legge questi valori tramite group_vars, quindi puoi anche
+# sovrascriverli per singolo host in host_vars/<nome-host>.yml
+# =============================================================================
+
+# --- Gestione utenti -----------------------------------------------------
+harden_create_admin_user: false      # crea un utente sudo dedicato (consigliato al primo bootstrap)
+harden_admin_user: "admin"
+harden_admin_pubkey: "ssh-ed25519 AAAA... tuo-commento"   # obbligatoria se harden_create_admin_user=true
+harden_lock_root_password: true      # blocca la password di root (root resta accessibile solo via sudo)
+
+# --- SSH -------------------------------------------------------------------
+harden_ssh: true
+ssh_port: 2400
+ssh_permit_root_login: "no"          # no | prohibit-password
+ssh_password_authentication: "no"    # metti "yes" SOLO se non hai ancora distribuito chiavi pubbliche
+ssh_allow_users: []                  # es. ["admin", "deploy"] - vuoto = nessuna restrizione AllowUsers
+ssh_allow_groups: ["sudo"]           # gruppi ammessi al login SSH
+ssh_max_auth_tries: 3
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2
+ssh_banner_text: |
+  ******************************************************************
+  Accesso riservato. Ogni attività su questo sistema è monitorata
+  e registrata. L'accesso non autorizzato è vietato e perseguibile.
+  ******************************************************************
+
+# --- Firewall (nftables) ----------------------------------------------------
+harden_firewall: true
+firewall_default_policy_input: "drop"
+firewall_allow_ssh_from: []           # es. ["203.0.113.0/24"] - vuoto = SSH aperto a tutti (rischioso, valuta fail2ban)
+firewall_allowed_tcp_ports: []        # porte extra, oltre a quelle aggiunte automaticamente dai ruoli web/mail/db
+firewall_allowed_udp_ports: []
+firewall_allow_icmp_echo: true        # ping in ingresso (rate-limited)
+
+# --- Fail2ban ----------------------------------------------------------------
+harden_fail2ban: true
+fail2ban_bantime: "1h"
+fail2ban_findtime: "10m"
+fail2ban_maxretry: 5
+fail2ban_ignoreip: "127.0.0.1/8 ::1"
+
+# --- Kernel / sysctl -----------------------------------------------------
+harden_sysctl: true
+sysctl_enable_ip_forward: false      # true SOLO se il server fa da router/gateway
+
+# --- PAM / password policy -----------------------------------------------
+harden_pam: true
+pam_password_remember: 5             # quante vecchie password ricordare
+pam_password_min_length: 12
+pam_faillock_deny: 5                 # tentativi falliti prima del lockout
+pam_faillock_unlock_time: 900        # secondi
+
+login_defs_pass_max_days: 365
+login_defs_pass_min_days: 1
+login_defs_pass_warn_age: 14
+
+# --- Audit (auditd) --------------------------------------------------------
+harden_auditd: true
+
+# --- AppArmor ----------------------------------------------------------------
+harden_apparmor: true
+
+# --- Aggiornamenti automatici (unattended-upgrades) -------------------------
+harden_unattended_upgrades: true
+unattended_upgrades_reboot_automatic: false
+unattended_upgrades_reboot_time: "03:30"
+
+# --- Tempo (systemd-timesyncd) ---------------------------------------------
+harden_ntp: true
+ntp_servers:
+  - "0.debian.pool.ntp.org"
+  - "1.debian.pool.ntp.org"
+  - "2.debian.pool.ntp.org"
+  - "3.debian.pool.ntp.org"
+
+# --- Moduli kernel da disabilitare (filesystem/protocolli rari) -------------
+harden_kernel_modules: true
+kernel_modules_blacklist:
+  - cramfs
+  - freevxfs
+  - jffs2
+  - hfs
+  - hfsplus
+  - udf
+  - usb-storage   # disattiva se ti servono chiavette USB
+  - dccp
+  - sctp
+  - rds
+  - tipc
+
+# --- Pacchetti da rimuovere se presenti -------------------------------------
+harden_remove_packages: true
+packages_to_remove:
+  - telnet
+  - rsh-client
+  - rsh-redone-client
+  - talk
+  - nis
+  - xinetd
+  - ldap-utils
+
+# =============================================================================
+# RUOLI DI SERVIZIO OPZIONALI
+# Abilita solo quelli che ti servono realmente sull'host in questione
+# (di solito via host_vars o group_vars/<gruppo>.yml, non qui globalmente)
+# =============================================================================
+
+# --- Web server (nginx) -----------------------------------------------------
+role_webserver: false
+webserver_domains: []                # es. ["example.com", "www.example.com"]
+webserver_enable_tls: true           # richiede certificati già presenti o certbot configurato a parte
+webserver_hsts: true
+
+# --- Mail server (Postfix + Dovecot) ----------------------------------------
+role_mailserver: false
+mail_hostname: "mail.example.com"
+mail_domain: "example.com"
+mail_networks_trusted: "127.0.0.0/8 [::1]/128"
+mail_enable_submission: true         # porta 587 con autenticazione obbligatoria
+mail_enable_pop3: false
+
+# --- Database server (MariaDB) ----------------------------------------------
+role_database: false
+db_bind_address: "127.0.0.1"
+db_remove_test_db: true
+db_remove_anonymous_users: true
+db_disable_remote_root: true

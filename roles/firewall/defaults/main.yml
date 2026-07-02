@@ -1,0 +1,6 @@
+---
+firewall_default_policy_input: "drop"
+firewall_allow_ssh_from: []
+firewall_allowed_tcp_ports: []
+firewall_allowed_udp_ports: []
+firewall_allow_icmp_echo: true

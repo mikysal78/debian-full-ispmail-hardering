@@ -1,0 +1,50 @@
+---
+- name: Verifica che il target sia Debian
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == "Debian"
+    fail_msg: "Questo playbook di hardening supporta solo Debian."
+
+- name: Includi task - pacchetti base e rimozione pacchetti a rischio
+  ansible.builtin.include_tasks: packages.yml
+
+- name: Includi task - gestione utenti
+  ansible.builtin.include_tasks: users.yml
+
+- name: Includi task - hardening SSH
+  ansible.builtin.include_tasks: ssh.yml
+  when: harden_ssh | default(true)
+
+- name: Includi task - sysctl / kernel networking
+  ansible.builtin.include_tasks: sysctl.yml
+  when: harden_sysctl | default(true)
+
+- name: Includi task - moduli kernel da disabilitare
+  ansible.builtin.include_tasks: kernel_modules.yml
+  when: harden_kernel_modules | default(true)
+
+- name: Includi task - PAM e password policy
+  ansible.builtin.include_tasks: pam.yml
+  when: harden_pam | default(true)
+
+- name: Includi task - auditd
+  ansible.builtin.include_tasks: auditd.yml
+  when: harden_auditd | default(true)
+
+- name: Includi task - AppArmor
+  ansible.builtin.include_tasks: apparmor.yml
+  when: harden_apparmor | default(true)
+
+- name: Includi task - aggiornamenti automatici
+  ansible.builtin.include_tasks: updates.yml
+  when: harden_unattended_upgrades | default(true)
+
+- name: Includi task - sincronizzazione oraria
+  ansible.builtin.include_tasks: ntp.yml
+  when: harden_ntp | default(true)
+
+- name: Includi task - logging (journald persistente)
+  ansible.builtin.include_tasks: logging.yml
+
+- name: Includi task - banner di login
+  ansible.builtin.include_tasks: banner.yml

@@ -1,0 +1,40 @@
+---
+- name: Aggiorna la cache apt
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Aggiorna tutti i pacchetti (dist-upgrade)
+  ansible.builtin.apt:
+    upgrade: dist
+    autoremove: true
+
+- name: Installa pacchetti essenziali per l'hardening
+  ansible.builtin.apt:
+    name:
+      - sudo
+      - nftables
+      - fail2ban
+      - auditd
+      - audispd-plugins
+      - apparmor
+      - apparmor-utils
+      - apparmor-profiles
+      - unattended-upgrades
+      - apt-listchanges
+      - libpam-pwquality
+      - libpam-modules
+      - acl
+      - ca-certificates
+      - needrestart
+      - rsyslog
+      - python3-apt
+    state: present
+
+- name: Rimuovi pacchetti a rischio se installati
+  ansible.builtin.apt:
+    name: "{{ packages_to_remove }}"
+    state: absent
+    purge: true
+    autoremove: true
+  when: harden_remove_packages | default(true)

@@ -1,0 +1,48 @@
+---
+# Questi default vengono sovrascritti da group_vars/all.yml.
+# Sono qui solo come rete di sicurezza se il ruolo viene eseguito standalone.
+harden_ssh: true
+ssh_port: 22
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+ssh_allow_users: []
+ssh_allow_groups: ["sudo"]
+ssh_max_auth_tries: 3
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2
+ssh_banner_text: "Accesso riservato. Attivita' monitorata."
+
+harden_create_admin_user: false
+harden_admin_user: "admin"
+harden_admin_pubkey: ""
+harden_lock_root_password: true
+
+harden_sysctl: true
+sysctl_enable_ip_forward: false
+
+harden_kernel_modules: true
+kernel_modules_blacklist: []
+
+harden_pam: true
+pam_password_remember: 5
+pam_password_min_length: 12
+pam_faillock_deny: 5
+pam_faillock_unlock_time: 900
+
+login_defs_pass_max_days: 365
+login_defs_pass_min_days: 1
+login_defs_pass_warn_age: 14
+
+harden_auditd: true
+harden_apparmor: true
+harden_unattended_upgrades: true
+unattended_upgrades_reboot_automatic: false
+unattended_upgrades_reboot_time: "03:30"
+
+harden_ntp: true
+ntp_servers:
+  - "0.debian.pool.ntp.org"
+  - "1.debian.pool.ntp.org"
+
+harden_remove_packages: true
+packages_to_remove: []

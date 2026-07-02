@@ -1,0 +1,4 @@
+---
+# Qualsiasi host in [mailservers] nell'inventario riceve automaticamente
+# il ruolo mailserver (Postfix + Dovecot hardenizzati).
+role_mailserver: true

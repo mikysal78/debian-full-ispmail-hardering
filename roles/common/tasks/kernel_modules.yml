@@ -1,0 +1,9 @@
+---
+- name: Distribuisci blacklist dei moduli kernel non necessari
+  ansible.builtin.template:
+    src: blacklist-hardening.conf.j2
+    dest: /etc/modprobe.d/blacklist-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: update initramfs

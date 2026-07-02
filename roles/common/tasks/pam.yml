@@ -1,0 +1,36 @@
+---
+- name: Configura pwquality (complessità password)
+  ansible.builtin.template:
+    src: pwquality.conf.j2
+    dest: /etc/security/pwquality.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Abilita pam_faillock per il lockout dopo tentativi falliti (common-auth)
+  ansible.builtin.blockinfile:
+    path: /etc/pam.d/common-auth
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - pam_faillock"
+    insertafter: "^# here are the per-package modules"
+    block: |
+      auth    required    pam_faillock.so preauth silent deny={{ pam_faillock_deny }} unlock_time={{ pam_faillock_unlock_time }}
+      auth    [default=die] pam_faillock.so authfail deny={{ pam_faillock_deny }} unlock_time={{ pam_faillock_unlock_time }}
+
+- name: Registra i successi di autenticazione per resettare il contatore faillock
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-account
+    line: "account required pam_faillock.so"
+    insertafter: EOF
+
+- name: Abilita pam_pwquality e cronologia password in common-password
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: "^password\\s+requisite\\s+pam_pwquality\\.so"
+    line: "password\trequisite\t\t\tpam_pwquality.so retry=3"
+    insertafter: "^# here are the per-package modules"
+
+- name: Applica remember= (cronologia password) sulla riga pam_unix di common-password
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: "^password\\s+\\[success=1 default=ignore\\]\\s+pam_unix\\.so"
+    line: "password\t[success=1 default=ignore]\tpam_unix.so obscure use_authtok try_first_pass yescrypt remember={{ pam_password_remember }}"

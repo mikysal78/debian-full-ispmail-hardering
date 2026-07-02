@@ -1,0 +1,7 @@
+{{ ansible_managed | comment }}
+# Filesystem e protocolli di rete raramente usati su un server:
+# disabilitarli riduce la superficie d'attacco del kernel.
+{% for mod in kernel_modules_blacklist %}
+install {{ mod }} /bin/false
+blacklist {{ mod }}
+{% endfor %}

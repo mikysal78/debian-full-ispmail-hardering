@@ -1,0 +1,40 @@
+---
+# =============================================================================
+# Playbook di hardening per Debian trixie (server)
+# =============================================================================
+- name: Hardening di base (tutti gli host)
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+    - common
+
+- name: Firewall e fail2ban (tutti gli host)
+  hosts: all
+  become: true
+  roles:
+    - role: firewall
+      when: harden_firewall | default(true)
+    - role: fail2ban
+      when: harden_fail2ban | default(true)
+
+- name: Web server (nginx)
+  hosts: webservers
+  become: true
+  roles:
+    - role: webserver
+      when: role_webserver | default(false)
+
+- name: Mail server (Postfix + Dovecot)
+  hosts: mailservers
+  become: true
+  roles:
+    - role: mailserver
+      when: role_mailserver | default(false)
+
+- name: Database server (MariaDB)
+  hosts: dbservers
+  become: true
+  roles:
+    - role: database
+      when: role_database | default(false)

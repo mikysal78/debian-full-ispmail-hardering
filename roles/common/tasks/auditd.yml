@@ -1,0 +1,29 @@
+---
+- name: Distribuisci regole di audit
+  ansible.builtin.template:
+    src: audit.rules.j2
+    dest: /etc/audit/rules.d/hardening.rules
+    owner: root
+    group: root
+    mode: "0640"
+  notify: restart auditd
+
+- name: Configura ritenzione log di auditd
+  ansible.builtin.lineinfile:
+    path: /etc/audit/auditd.conf
+    regexp: "^{{ item.key }}\\s*="
+    line: "{{ item.key }} = {{ item.value }}"
+  loop:
+    - { key: "max_log_file", value: "50" }
+    - { key: "max_log_file_action", value: "rotate" }
+    - { key: "num_logs", value: "5" }
+    - { key: "space_left_action", value: "email" }
+    - { key: "action_mail_acct", value: "root" }
+    - { key: "admin_space_left_action", value: "halt" }
+  notify: restart auditd
+
+- name: Abilita e avvia auditd
+  ansible.builtin.systemd:
+    name: auditd
+    enabled: true
+    state: started

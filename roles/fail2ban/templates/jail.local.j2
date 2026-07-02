@@ -1,0 +1,45 @@
+{{ ansible_managed | comment }}
+[DEFAULT]
+bantime  = {{ fail2ban_bantime }}
+findtime = {{ fail2ban_findtime }}
+maxretry = {{ fail2ban_maxretry }}
+ignoreip = {{ fail2ban_ignoreip }}
+
+# Il firewall di questo host è gestito con nftables
+banaction = nftables-multiport
+banaction_allports = nftables-allports
+
+backend = systemd
+
+[sshd]
+enabled = true
+port    = {{ ssh_port }}
+mode    = aggressive
+
+{% if role_webserver | default(false) %}
+[nginx-http-auth]
+enabled = true
+port    = http,https
+
+[nginx-botsearch]
+enabled = true
+port    = http,https
+
+[nginx-limit-req]
+enabled = true
+port    = http,https
+{% endif %}
+
+{% if role_mailserver | default(false) %}
+[postfix]
+enabled  = true
+port     = smtp,465,submission
+
+[postfix-sasl]
+enabled  = true
+port     = smtp,465,submission,imap,imaps,pop3,pop3s
+
+[dovecot]
+enabled  = true
+port     = imap,imaps,pop3,pop3s,submission,465,sieve
+{% endif %}

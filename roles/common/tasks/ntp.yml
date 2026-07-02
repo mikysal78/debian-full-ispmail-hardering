@@ -1,0 +1,15 @@
+---
+- name: Configura systemd-timesyncd
+  ansible.builtin.template:
+    src: timesyncd.conf.j2
+    dest: /etc/systemd/timesyncd.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart systemd-timesyncd
+
+- name: Abilita e avvia systemd-timesyncd
+  ansible.builtin.systemd:
+    name: systemd-timesyncd
+    enabled: true
+    state: started

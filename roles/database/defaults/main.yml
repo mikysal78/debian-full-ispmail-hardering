@@ -1,0 +1,5 @@
+---
+db_bind_address: "127.0.0.1"
+db_remove_test_db: true
+db_remove_anonymous_users: true
+db_disable_remote_root: true

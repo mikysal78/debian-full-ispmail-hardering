@@ -1,0 +1,13 @@
+{{ ansible_managed | comment }}
+minlen = {{ pam_password_min_length }}
+dcredit = -1
+ucredit = -1
+lcredit = -1
+ocredit = -1
+minclass = 3
+maxrepeat = 3
+maxsequence = 3
+dictcheck = 1
+usercheck = 1
+enforce_for_root
+retry = 3

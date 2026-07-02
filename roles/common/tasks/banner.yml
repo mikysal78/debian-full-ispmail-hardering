@@ -1,0 +1,26 @@
+---
+- name: Distribuisci banner legale (/etc/issue.net)
+  ansible.builtin.template:
+    src: issue.j2
+    dest: /etc/issue.net
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Distribuisci banner legale anche su /etc/issue (console locale)
+  ansible.builtin.copy:
+    src: /etc/issue.net
+    dest: /etc/issue
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Rimuovi informazioni di versione da /etc/motd
+  ansible.builtin.copy:
+    content: ""
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: "0644"
+    force: false

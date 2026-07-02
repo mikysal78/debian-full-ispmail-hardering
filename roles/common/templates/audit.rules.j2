@@ -1,0 +1,58 @@
+{{ ansible_managed | comment }}
+# Regole di audit ispirate a CIS Debian Linux Benchmark
+
+-D
+-b 8192
+-f 1
+
+# --- Identità e accessi ---
+-w /etc/passwd -p wa -k identity
+-w /etc/group -p wa -k identity
+-w /etc/shadow -p wa -k identity
+-w /etc/gshadow -p wa -k identity
+-w /etc/security/opasswd -p wa -k identity
+-w /etc/sudoers -p wa -k scope
+-w /etc/sudoers.d/ -p wa -k scope
+-w /var/log/sudo.log -p wa -k actions
+
+# --- SSH ---
+-w /etc/ssh/sshd_config -p wa -k sshd
+-w /etc/ssh/sshd_config.d/ -p wa -k sshd
+
+# --- Login/logout ---
+-w /var/log/faillog -p wa -k logins
+-w /var/log/lastlog -p wa -k logins
+-w /var/run/utmp -p wa -k session
+-w /var/log/wtmp -p wa -k session
+-w /var/log/btmp -p wa -k session
+
+# --- Rete ---
+-a always,exit -F arch=b64 -S sethostname,setdomainname -k network
+-w /etc/hosts -p wa -k network
+-w /etc/network/ -p wa -k network
+-w /etc/nftables.conf -p wa -k network
+
+# --- Escalation di privilegi ---
+-a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -k privilege_escalation
+-a always,exit -F arch=b32 -S execve -C uid!=euid -F euid=0 -k privilege_escalation
+
+# --- Moduli kernel ---
+-w /sbin/insmod -p x -k modules
+-w /sbin/rmmod -p x -k modules
+-w /sbin/modprobe -p x -k modules
+-a always,exit -F arch=b64 -S init_module,delete_module -k modules
+
+# --- Cron ---
+-w /etc/crontab -p wa -k cron
+-w /etc/cron.d/ -p wa -k cron
+-w /var/spool/cron/ -p wa -k cron
+
+# --- File system mount ---
+-a always,exit -F arch=b64 -S mount -k mounts
+
+# --- Modalità immutabile (opzionale) ---
+# "-e 2" blocca ulteriori modifiche alle regole fino al riavvio: utile in
+# produzione, ma rompe i run idempotenti di questo playbook (il reload
+# delle regole fallisce finché non si riavvia). Abilitala manualmente
+# quando l'hardening è stabile:
+# -e 2

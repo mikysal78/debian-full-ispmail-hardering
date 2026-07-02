@@ -1,0 +1,25 @@
+---
+- name: Crea directory persistente per i log di journald
+  ansible.builtin.file:
+    path: /var/log/journal
+    state: directory
+    owner: root
+    group: systemd-journal
+    mode: "2755"
+
+- name: Configura journald (persistenza, compressione, dimensione max)
+  ansible.builtin.template:
+    src: journald.conf.j2
+    dest: /etc/systemd/journald.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart systemd-journald
+
+- name: Permessi restrittivi sui file di log esistenti in /var/log
+  ansible.builtin.shell: |
+    set -o pipefail
+    find /var/log -type f -exec chmod g-wx,o-rwx {} \; 2>/dev/null || true
+  args:
+    executable: /bin/bash
+  changed_when: false

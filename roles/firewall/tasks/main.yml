@@ -1,0 +1,29 @@
+---
+- name: Verifica se ufw è installato (potenziale conflitto con nftables)
+  ansible.builtin.command: dpkg -s ufw
+  register: ufw_check
+  changed_when: false
+  failed_when: false
+
+- name: Disabilita ufw se presente, per evitare conflitti con nftables
+  ansible.builtin.systemd:
+    name: ufw
+    enabled: false
+    state: stopped
+  when: ufw_check.rc == 0
+
+- name: Distribuisci la configurazione nftables
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0640"
+    validate: "nft -c -f %s"
+  notify: restart nftables
+
+- name: Abilita e avvia nftables
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: true
+    state: started

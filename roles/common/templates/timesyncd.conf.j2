@@ -1,0 +1,4 @@
+{{ ansible_managed | comment }}
+[Time]
+NTP={{ ntp_servers | join(' ') }}
+FallbackNTP=debian.pool.ntp.org

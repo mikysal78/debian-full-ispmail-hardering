@@ -1,0 +1,55 @@
+---
+- name: Crea utente admin dedicato
+  ansible.builtin.user:
+    name: "{{ harden_admin_user }}"
+    groups: sudo
+    shell: /bin/bash
+    append: true
+    create_home: true
+    state: present
+  when: harden_create_admin_user | default(false)
+
+- name: Distribuisci chiave pubblica per l'utente admin
+  ansible.posix.authorized_key:
+    user: "{{ harden_admin_user }}"
+    key: "{{ harden_admin_pubkey }}"
+    state: present
+  when: harden_create_admin_user | default(false)
+
+- name: Blocca la password di root (accesso solo via sudo/chiave)
+  ansible.builtin.user:
+    name: root
+    password_lock: true
+  when: harden_lock_root_password | default(true)
+
+- name: Imposta permessi restrittivi sulle home degli utenti
+  ansible.builtin.shell: |
+    set -o pipefail
+    for d in $(getent passwd | awk -F: '$3>=1000 && $3<60000 {print $6}'); do
+      [ -d "$d" ] && chmod 750 "$d"
+    done
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Configura password aging in /etc/login.defs
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }}\t{{ item.value }}"
+  loop:
+    - { key: "PASS_MAX_DAYS", value: "{{ login_defs_pass_max_days }}" }
+    - { key: "PASS_MIN_DAYS", value: "{{ login_defs_pass_min_days }}" }
+    - { key: "PASS_WARN_AGE", value: "{{ login_defs_pass_warn_age }}" }
+
+- name: Imposta umask di default a 027 in /etc/login.defs
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: "^UMASK"
+    line: "UMASK\t\t027"
+
+- name: Disabilita ctrl-alt-del.target
+  ansible.builtin.systemd:
+    name: ctrl-alt-del.target
+    masked: true
+    enabled: false

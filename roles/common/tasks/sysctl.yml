@@ -1,0 +1,14 @@
+---
+- name: Distribuisci parametri sysctl di hardening
+  ansible.builtin.template:
+    src: 99-hardening.conf.j2
+    dest: /etc/sysctl.d/99-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload sysctl
+
+- name: Imposta permessi restrittivi su /boot
+  ansible.builtin.file:
+    path: /boot
+    mode: "0700"

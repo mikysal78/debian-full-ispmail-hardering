@@ -1,0 +1,73 @@
+---
+- name: Preconfigura debconf per un'installazione non interattiva di postfix
+  ansible.builtin.debconf:
+    name: postfix
+    question: "{{ item.q }}"
+    value: "{{ item.v }}"
+    vtype: "{{ item.t }}"
+  loop:
+    - { q: "postfix/main_mailer_type", v: "Internet Site", t: "select" }
+    - { q: "postfix/mailname", v: "{{ mail_hostname }}", t: "string" }
+
+- name: Installa Postfix, Dovecot e strumenti di supporto
+  ansible.builtin.apt:
+    name:
+      - postfix
+      - dovecot-imapd
+      - dovecot-lmtpd
+      - libsasl2-modules
+      - ssl-cert
+      - mailutils
+      - opendkim
+      - opendkim-tools
+    state: present
+    update_cache: true
+
+- name: Installa dovecot-pop3d se il POP3 è richiesto
+  ansible.builtin.apt:
+    name: dovecot-pop3d
+    state: present
+  when: mail_enable_pop3 | default(false)
+
+- name: Distribuisci main.cf di Postfix (hardening TLS + anti relay)
+  ansible.builtin.template:
+    src: main.cf.j2
+    dest: /etc/postfix/main.cf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart postfix
+
+- name: Distribuisci master.cf di Postfix (submission autenticata)
+  ansible.builtin.template:
+    src: master.cf.j2
+    dest: /etc/postfix/master.cf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart postfix
+
+- name: Distribuisci hardening di Dovecot
+  ansible.builtin.template:
+    src: dovecot-hardening.conf.j2
+    dest: /etc/dovecot/conf.d/99-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart dovecot
+
+- name: Verifica che Dovecot usi il certificato TLS di sistema (snakeoil di default)
+  ansible.builtin.lineinfile:
+    path: /etc/dovecot/conf.d/10-ssl.conf
+    regexp: "^ssl ="
+    line: "ssl = required"
+  notify: restart dovecot
+
+- name: Abilita e avvia Postfix e Dovecot
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - postfix
+    - dovecot

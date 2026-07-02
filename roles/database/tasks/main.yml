@@ -1,0 +1,49 @@
+---
+- name: Installa MariaDB e le dipendenze Python per i moduli Ansible
+  ansible.builtin.apt:
+    name:
+      - mariadb-server
+      - python3-pymysql
+    state: present
+    update_cache: true
+
+- name: Assicura che MariaDB sia avviato (necessario per i task successivi)
+  ansible.builtin.systemd:
+    name: mariadb
+    enabled: true
+    state: started
+
+- name: Applica bind-address e altre impostazioni di hardening
+  ansible.builtin.template:
+    src: 50-hardening.cnf.j2
+    dest: /etc/mysql/mariadb.conf.d/50-hardening.cnf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart mariadb
+
+- name: Flush handlers per applicare subito il bind-address prima delle query
+  ansible.builtin.meta: flush_handlers
+
+- name: Rimuovi utenti anonimi
+  community.mysql.mysql_user:
+    name: ""
+    host_all: true
+    state: absent
+    login_unix_socket: /run/mysqld/mysqld.sock
+  when: db_remove_anonymous_users | default(true)
+
+- name: Rimuovi il database di test
+  community.mysql.mysql_db:
+    name: test
+    state: absent
+    login_unix_socket: /run/mysqld/mysqld.sock
+  when: db_remove_test_db | default(true)
+
+- name: Consenti login di root solo via socket locale (unix_socket auth)
+  community.mysql.mysql_query:
+    login_unix_socket: /run/mysqld/mysqld.sock
+    query:
+      - "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost','127.0.0.1','::1')"
+      - "FLUSH PRIVILEGES"
+  when: db_disable_remote_root | default(true)
