@@ -159,7 +159,7 @@
 - name: Estrai il riepilogo finale (URL e password) dall'output di ispmail.sh
   ansible.builtin.set_fact:
     ispmail_summary: "{{ ispmail_run.stdout.split('PLEASE NOTE:')[1] | trim }}"
-  when: ispmail_run is changed and "'PLEASE NOTE:' in ispmail_run.stdout"
+  when: ispmail_run is changed and "PLEASE NOTE:" in ispmail_run.stdout
 
 - name: Riepilogo finale - link di accesso e password generate
   ansible.builtin.debug:
