@@ -146,12 +146,14 @@ certbot.
    (oppure valorizza `ispmail_fqdn` in `group_vars/mailservers.yml`/`host_vars`).
 
 Note:
-- **Verifica i nomi file esatti** che il tuo ruolo `ansible-dns` scrive
-  sotto `/etc/ssl/acme/`: `roles/ispmail/defaults/main.yml` assume per
-  ora `/etc/ssl/acme/<fqdn>/fullchain.pem` e `privkey.pem` (stessa
-  convenzione di certbot), ma è una supposizione — correggi
-  `ispmail_cert_fullchain_src`/`ispmail_cert_privkey_src` se i percorsi
-  reali sono diversi.
+- Il ruolo si aspetta i file del certificato "piatti" sotto
+  `/etc/ssl/acme/<nome>.fullchain.pem` e `<nome>.key`. Se `<nome>` non
+  coincide con `ispmail_fqdn` (es. certificato sul dominio apex/wildcard
+  invece che sul sottodominio `mail.*`, come nel caso tipico di un
+  dominio mail su un sottodominio), imposta `ispmail_cert_name` di
+  conseguenza — **verifica anche che quel certificato copra davvero
+  l'FQDN del mail server** (SAN o wildcard), altrimenti Postfix/Dovecot/
+  Roundcube presenteranno un certificato con nome diverso dall'hostname.
 - Se il certificato manca in `/etc/ssl/acme/` quando lanci `ispmail.yml`,
   il ruolo si ferma subito con un errore esplicito (non lascia che sia
   ispmail.sh a scoprirlo a metà installazione).

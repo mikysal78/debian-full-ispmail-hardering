@@ -14,14 +14,17 @@ ispmail_log_file: "/root/ispmail-install-{{ ispmail_fqdn }}.log"
 # (/etc/letsencrypt/live/<fqdn>/{fullchain,privkey}.pem) e chiama
 # "certbot --apache" SOLO se quella directory non esiste già. Il
 # certificato qui è provisionato dal ruolo ansible-dns (validazione DNS-01)
-# che lo copia in /etc/ssl/acme/: il ruolo lo copia nel path standard
-# PRIMA di eseguire ispmail.sh, che così rileva il certificato esistente
-# e salta la propria chiamata a certbot.
+# che lo copia in /etc/ssl/acme/ con nomi file "piatti": il ruolo lo copia
+# nel path standard PRIMA di eseguire ispmail.sh, che così rileva il
+# certificato esistente e salta la propria chiamata a certbot.
 ispmail_cert_dir: "/etc/letsencrypt/live/{{ ispmail_fqdn }}"
 
-# ATTENZIONE: i nomi file esatti sotto /etc/ssl/acme/ sono una supposizione
-# (stessa convenzione di certbot: fullchain.pem/privkey.pem in una
-# sottodirectory per dominio). Verifica sul server con il ruolo ansible-dns
-# quali file/percorsi produce davvero e correggi qui se necessario.
-ispmail_cert_fullchain_src: "/etc/ssl/acme/{{ ispmail_fqdn }}/fullchain.pem"
-ispmail_cert_privkey_src: "/etc/ssl/acme/{{ ispmail_fqdn }}/privkey.pem"
+# Nome usato da ansible-dns per i file del certificato sotto /etc/ssl/acme/.
+# Può NON coincidere con ispmail_fqdn: es. un certificato per il dominio
+# apex "example.com" (anche wildcard) usato pure per "mail.example.com".
+# Assicurati che il certificato copra davvero l'FQDN del mail server
+# (SAN o wildcard), altrimenti client di posta e Roundcube segnaleranno
+# un mismatch del nome nel certificato.
+ispmail_cert_name: "{{ ispmail_fqdn }}"
+ispmail_cert_fullchain_src: "/etc/ssl/acme/{{ ispmail_cert_name }}.fullchain.pem"
+ispmail_cert_privkey_src: "/etc/ssl/acme/{{ ispmail_cert_name }}.key"
