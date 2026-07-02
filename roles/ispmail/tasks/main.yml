@@ -118,7 +118,7 @@
 
 - name: Esegui ispmail.sh (una sola volta - installa un intero mail server, richiede diversi minuti)
   ansible.builtin.shell: |
-    set -o pipefail
+    set -euo pipefail
     umask 077
     echo | {{ ispmail_script_path }} -f {{ ispmail_fqdn }} 2>&1 | tee {{ ispmail_log_file }}
     touch {{ ispmail_marker_file }}
