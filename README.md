@@ -206,10 +206,12 @@ al livello di garanzie di `ispmail.sh`/workaround.org:
   `mailserver` in sola lettura creato da ispmail.sh.
 
 Per questo il ruolo `ispmail_admin`, per difendersi:
-- espone il pannello su `https://<ispmail_fqdn>/ima` ma lo restringe via
+- lo espone su un **vhost dedicato** (`ispmail_admin_fqdn`, es.
+  `ispmail.tuodominio.it` — non un path su `ispmail_fqdn`) ristretto via
   Apache (`Require ip`) solo alle reti in `ispmail_admin_allow_networks`
   (default: le stesse reti già whitelistate su fail2ban) — le porte 80/443
-  restano pubbliche per Roundcube/rspamd-ui, ma quel path specifico no;
+  restano pubbliche per Roundcube/rspamd-ui su `ispmail_fqdn`, ma questo
+  vhost separato no;
 - genera e salva da solo utente/password admin e password del DB
   sul controller Ansible in `secrets/<fqdn>-ima-admin.txt` e
   `secrets/<fqdn>-ima-db.txt` (stessa cartella, stesso trattamento delle
@@ -217,9 +219,29 @@ Per questo il ruolo `ispmail_admin`, per difendersi:
 - crea l'utente DB con permessi limitati alla sola tabella `mailserver`,
   non `ALL PRIVILEGES`.
 
+`ispmail_admin_fqdn` deve risolvere via DNS verso questo host ed essere
+coperto dal certificato TLS di `ispmail_fqdn` (SAN o wildcard) — il ruolo
+non lo verifica automaticamente, solo un `assert` che sia stato impostato.
+
 Se preferisci non installarlo, i domini/mailbox/alias restano comunque
 gestibili a mano via SQL sul database `mailserver` (stesso schema che usa
 ISPmail Admin: `virtual_domains`, `virtual_users`, `virtual_aliases`).
+
+### Un hostname diverso per il webmail
+
+Di default Roundcube risponde solo su `https://<ispmail_fqdn>/` (lo stesso
+hostname usato per SMTP/IMAP). Se preferisci un hostname dedicato per il
+webmail (es. `webmail.tuodominio.it`), imposta:
+
+```yaml
+ispmail_webmail_fqdn: "webmail.tuodominio.it"
+```
+
+Il ruolo aggiunge un `ServerAlias` al vhost di Roundcube scritto da
+ispmail.sh: `ispmail_fqdn` resta l'hostname "vero" (Postfix/Dovecot/TLS),
+`ispmail_webmail_fqdn` è solo un alias in più per raggiungerlo via browser.
+Anche questo deve risolvere via DNS verso l'host ed essere coperto dal
+certificato TLS.
 
 ## Whitelist fail2ban (IP/reti mai bannati)
 

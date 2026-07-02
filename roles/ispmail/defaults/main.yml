@@ -2,7 +2,16 @@
 # FQDN pubblico del mail server (es. "mail.example.com"). Obbligatorio:
 # ci deve puntare il DNS pubblico ed è per questo dominio che ispmail.sh
 # richiede il certificato Let's Encrypt e configura Postfix/Dovecot/Roundcube.
+# Resta l'hostname dei PROTOCOLLI (SMTP/IMAP, myhostname di Postfix, ecc.)
+# anche se imposti ispmail_webmail_fqdn sotto.
 ispmail_fqdn: ""
+
+# Hostname su cui è raggiungibile Roundcube via browser (ServerAlias in più
+# rispetto a ispmail_fqdn nel vhost Apache). Di default coincide con
+# ispmail_fqdn; impostalo solo se vuoi un hostname diverso per il webmail
+# (es. "webmail.example.com"), che deve comunque essere coperto dal
+# certificato TLS (SAN o wildcard) e risolvere via DNS verso questo host.
+ispmail_webmail_fqdn: "{{ ispmail_fqdn }}"
 
 ispmail_script_url: "https://workaround.org/ispmail.sh"
 ispmail_script_path: "/usr/local/sbin/ispmail.sh"

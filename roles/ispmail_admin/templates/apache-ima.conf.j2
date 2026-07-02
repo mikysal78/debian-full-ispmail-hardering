@@ -1,16 +1,31 @@
 {{ ansible_managed | comment }}
-# ISPmail Admin, raggiungibile solo dalle reti di gestione: 80/443 restano
-# aperti pubblicamente per Roundcube/rspamd-ui, questo blocco applica una
-# restrizione aggiuntiva solo per questo path, su tutti i vhost.
+# ISPmail Admin su vhost dedicato, raggiungibile solo dalle reti di gestione.
+# Usa lo stesso certificato (wildcard) di ispmail_fqdn.
 
-Alias {{ ispmail_admin_url_path }} {{ ispmail_admin_install_dir }}
+<VirtualHost *:80>
+    ServerName {{ ispmail_admin_fqdn }}
+    Redirect permanent / https://{{ ispmail_admin_fqdn }}/
+</VirtualHost>
 
-<Directory "{{ ispmail_admin_install_dir }}">
-    Options -Indexes -FollowSymLinks
-    AllowOverride None
-    Require ip {{ ispmail_admin_allow_networks | join(' ') }}
-</Directory>
+<VirtualHost *:443>
+    ServerName {{ ispmail_admin_fqdn }}
+    DocumentRoot {{ ispmail_admin_install_dir }}
 
-<Directory "{{ ispmail_admin_install_dir }}/cfg">
-    Require all denied
-</Directory>
+    SSLEngine on
+    SSLCertificateFile {{ ispmail_cert_dir }}/fullchain.pem
+    SSLCertificateKeyFile {{ ispmail_cert_dir }}/privkey.pem
+    Include /etc/letsencrypt/options-ssl-apache.conf
+
+    ErrorLog ${APACHE_LOG_DIR}/ispmail-admin-error.log
+    CustomLog ${APACHE_LOG_DIR}/ispmail-admin-access.log combined
+
+    <Directory "{{ ispmail_admin_install_dir }}">
+        Options -Indexes -FollowSymLinks
+        AllowOverride None
+        Require ip {{ ispmail_admin_allow_networks | join(' ') }}
+    </Directory>
+
+    <Directory "{{ ispmail_admin_install_dir }}/cfg">
+        Require all denied
+    </Directory>
+</VirtualHost>

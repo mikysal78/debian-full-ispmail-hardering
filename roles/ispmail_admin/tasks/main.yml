@@ -1,10 +1,15 @@
 ---
-- name: Verifica che ispmail_fqdn sia impostato
+- name: Verifica che ispmail_fqdn e ispmail_admin_fqdn siano impostati
   ansible.builtin.assert:
     that:
       - ispmail_fqdn is defined
       - ispmail_fqdn | length > 0
-    fail_msg: "ispmail_admin dipende da ispmail_fqdn (stesso dominio del mail server ispmail.sh)."
+      - ispmail_admin_fqdn | default('') | length > 0
+    fail_msg: >
+      ispmail_admin richiede ispmail_fqdn (stesso mail server di ispmail.sh)
+      e ispmail_admin_fqdn (l'hostname dedicato del pannello, es.
+      "ispmail.example.com": deve risolvere via DNS verso questo host ed
+      essere coperto dal certificato TLS di ispmail_fqdn - SAN o wildcard).
     quiet: true
 
 - name: Crea l'utente MariaDB per ISPmail Admin (permessi limitati, non ALL PRIVILEGES)
@@ -60,19 +65,22 @@
     path: "{{ ispmail_admin_install_dir }}/cfg/config.sample.inc.php"
     state: absent
 
-- name: Configura Apache per servire ISPmail Admin solo dalla rete di gestione
+# Vhost dedicato (sites-available, non conf-available: contiene dei veri
+# <VirtualHost>, non solo frammenti condivisi), sul certificato wildcard
+# già collegato da roles/ispmail in ispmail_cert_dir.
+- name: Configura il vhost Apache dedicato di ISPmail Admin
   ansible.builtin.template:
     src: apache-ima.conf.j2
-    dest: /etc/apache2/conf-available/ispmail-admin.conf
+    dest: /etc/apache2/sites-available/ispmail-admin.conf
     owner: root
     group: root
     mode: "0644"
   notify: reload apache
 
-- name: Abilita la configurazione Apache di ISPmail Admin
-  ansible.builtin.command: a2enconf ispmail-admin
+- name: Abilita il vhost Apache di ISPmail Admin
+  ansible.builtin.command: a2ensite ispmail-admin
   args:
-    creates: /etc/apache2/conf-enabled/ispmail-admin.conf
+    creates: /etc/apache2/sites-enabled/ispmail-admin.conf
   notify: reload apache
 
 - name: Verifica subito la sintassi di Apache (fail-fast, non aspettare l'handler)
@@ -82,9 +90,10 @@
 - name: Mostra dove trovare le credenziali di ISPmail Admin
   ansible.builtin.debug:
     msg: >
-      ISPmail Admin è su https://{{ ispmail_fqdn }}{{ ispmail_admin_url_path }},
-      raggiungibile solo da {{ ispmail_admin_allow_networks | join(', ') }}.
-      Utente: {{ ispmail_admin_login_user }}. Password admin e password del
-      DB salvate sul controller Ansible in
+      ISPmail Admin è su https://{{ ispmail_admin_fqdn }}/, raggiungibile
+      solo da {{ ispmail_admin_allow_networks | join(', ') }}. Utente:
+      {{ ispmail_admin_login_user }}. Password admin e password del DB
+      salvate sul controller Ansible in
       secrets/{{ ispmail_fqdn }}-ima-admin.txt e
-      secrets/{{ ispmail_fqdn }}-ima-db.txt.
+      secrets/{{ ispmail_fqdn }}-ima-db.txt. Verifica che il DNS di
+      {{ ispmail_admin_fqdn }} punti a questo host.

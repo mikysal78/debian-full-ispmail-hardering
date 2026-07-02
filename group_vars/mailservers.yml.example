@@ -6,7 +6,8 @@ role_mailserver: true
 # Se installi la posta con ispmail.sh (vedi ispmail.yml) invece del ruolo
 # mailserver di questo repo, decommenta e valorizza queste righe:
 # mailserver_manage_service: false
-# ispmail_fqdn: "mail.example.com"
+# ispmail_fqdn: "mail.example.com"        # hostname dei protocolli SMTP/IMAP
+# ispmail_webmail_fqdn: "webmail.example.com"  # opzionale: ServerAlias dedicato per Roundcube via browser
 # firewall_allowed_tcp_ports: [80, 443]   # servono a Roundcube/rspamd-ui via Apache
 #
 # Se il certificato TLS viene provisionato da un ruolo esterno (es.
@@ -21,9 +22,10 @@ role_mailserver: true
 # ispmail_cert_fullchain_src: "/etc/ssl/acme/mail.example.com.fullchain.pem"
 # ispmail_cert_privkey_src: "/etc/ssl/acme/mail.example.com.key"
 #
-# Pannello web opzionale per gestire domini/mailbox/alias (vedi README
-# per i compromessi: download solo HTTP, nessun checksum pubblicato).
-# Di default raggiungibile solo dalle reti indicate in
-# ispmail_admin_allow_networks (roles/ispmail_admin/defaults/main.yml):
+# Pannello web opzionale per gestire domini/mailbox/alias, su vhost dedicato
+# (non un path su ispmail_fqdn - vedi README per i compromessi: download
+# solo HTTP, nessun checksum pubblicato). Raggiungibile solo dalle reti in
+# ispmail_admin_allow_networks (default in roles/ispmail_admin/defaults):
 # ispmail_admin_enabled: true
+# ispmail_admin_fqdn: "ispmail.example.com"
 # ispmail_admin_allow_networks: ["203.0.113.0/24"]

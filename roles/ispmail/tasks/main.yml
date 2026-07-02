@@ -116,6 +116,19 @@
       a2enmod ssl -q
       a2ensite 000-default-le-ssl -q
 
+# Il vhost scritto da apache_config() ha "ServerName $FQDN" (mail.example.com,
+# necessario per Postfix/Dovecot/TLS): se vuoi che Roundcube sia raggiungibile
+# anche su un hostname diverso (es. webmail.example.com), aggiungiamo un
+# ServerAlias nello stesso vhost - il DNS di quell'hostname deve comunque
+# puntare a questo host, e il certificato TLS deve coprirlo (SAN o wildcard).
+- name: Patch ispmail.sh per aggiungere il ServerAlias del webmail
+  ansible.builtin.lineinfile:
+    path: "{{ ispmail_script_path }}"
+    insertafter: '^\s*ServerName \$FQDN\s*$'
+    regexp: '^\s*ServerAlias '
+    line: "\tServerAlias {{ ispmail_webmail_fqdn }}"
+  when: ispmail_webmail_fqdn != ispmail_fqdn
+
 # Il vhost 000-default-le-ssl.conf scritto da apache_config() include
 # /etc/letsencrypt/options-ssl-apache.conf, che normalmente crea certbot
 # stesso al primo utilizzo del plugin apache. Senza certbot quel file non

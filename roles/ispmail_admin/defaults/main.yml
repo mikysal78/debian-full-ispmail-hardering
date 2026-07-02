@@ -9,12 +9,16 @@ ispmail_admin_version: "0.9.11"
 ispmail_admin_download_url: "http://ima.jungclaussen.com/dwn/dwn.php?v={{ ispmail_admin_version }}&f=.tar.gz"
 ispmail_admin_archive_path: "/tmp/ispmail-admin-{{ ispmail_admin_version }}.tar.gz"
 ispmail_admin_install_dir: "/var/www/ispmail-admin"
-ispmail_admin_url_path: "/ima"
+
+# Vhost dedicato (non un path su ispmail_fqdn): il DNS di questo hostname
+# deve puntare a questo host, e il certificato TLS deve coprirlo (SAN o
+# wildcard). Obbligatorio se ispmail_admin_enabled=true.
+ispmail_admin_fqdn: ""
 
 # Reti autorizzate a raggiungere il pannello. Le porte 80/443 restano
-# aperte pubblicamente (servono a Roundcube/rspamd-ui): la restrizione
-# è quindi applicata qui a livello Apache (Require ip), non a livello
-# firewall, perché nftables non distingue i path dentro lo stesso vhost.
+# aperte pubblicamente (servono a Roundcube/rspamd-ui su ispmail_fqdn): la
+# restrizione è applicata qui a livello Apache (Require ip) sul vhost
+# dedicato di ispmail_admin_fqdn.
 ispmail_admin_allow_networks:
   - "10.27.22.0/24"
   - "10.27.0.0/24"
