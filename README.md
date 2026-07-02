@@ -121,23 +121,47 @@ un playbook standalone che scarica ed esegue
 Postfix + Dovecot + Roundcube + Rspamd + MariaDB con TLS via Let's Encrypt,
 seguendo la guida [ISPmail](https://workaround.org).
 
+Il certificato TLS **non** lo richiede ispmail.sh (che lo farebbe via
+`certbot --apache`, validazione HTTP-01): lo provisiona invece il ruolo
+`ansible-dns` (validazione DNS-01), che lo copia in `/etc/ssl/acme/`. Il
+ruolo `ispmail` lo copia da lì nel path standard di certbot
+(`/etc/letsencrypt/live/<fqdn>/`) **prima** di lanciare lo script, che a
+quel punto lo trova già presente e salta da solo la propria chiamata a
+certbot.
+
 1. In `group_vars/all.yml` (o `group_vars/mailservers.yml`) imposta:
    ```yaml
    role_mailserver: true              # firewall/fail2ban aprono comunque le porte mail
    mailserver_manage_service: false   # il ruolo Ansible "mailserver" di questo repo NON gira
-   firewall_allowed_tcp_ports: [80, 443]   # richieste da certbot e da Roundcube/rspamd-ui (Apache)
+   firewall_allowed_tcp_ports: [80, 443]   # servono a Roundcube/rspamd-ui via Apache (non più a certbot)
    ```
    `role_webserver` deve restare `false` su questi host: ispmail.sh installa
    Apache, non nginx, e i due andrebbero in conflitto sulle porte 80/443.
-2. Assicurati che il DNS pubblico dell'FQDN scelto punti già a questo
-   server (richiesto dalla validazione HTTP-01 di Let's Encrypt).
-3. Esegui prima `playbook.yml` (hardening + firewall), poi:
+2. Esegui prima il ruolo `ansible-dns` per ottenere il certificato di
+   `ispmail_fqdn` in `/etc/ssl/acme/`, poi `playbook.yml` (hardening +
+   firewall), poi:
    ```bash
    ansible-playbook ispmail.yml -e ispmail_fqdn=mail.tuodominio.it
    ```
    (oppure valorizza `ispmail_fqdn` in `group_vars/mailservers.yml`/`host_vars`).
 
 Note:
+- **Verifica i nomi file esatti** che il tuo ruolo `ansible-dns` scrive
+  sotto `/etc/ssl/acme/`: `roles/ispmail/defaults/main.yml` assume per
+  ora `/etc/ssl/acme/<fqdn>/fullchain.pem` e `privkey.pem` (stessa
+  convenzione di certbot), ma è una supposizione — correggi
+  `ispmail_cert_fullchain_src`/`ispmail_cert_privkey_src` se i percorsi
+  reali sono diversi.
+- Se il certificato manca in `/etc/ssl/acme/` quando lanci `ispmail.yml`,
+  il ruolo si ferma subito con un errore esplicito (non lascia che sia
+  ispmail.sh a scoprirlo a metà installazione).
+- ispmail.sh normalmente si aspetta che sia `certbot --apache` (chiamato
+  prima di configurare Apache) ad abilitare `mod_ssl` e il vhost
+  `000-default-le-ssl.conf` di Roundcube. Siccome qui quella chiamata
+  viene saltata, il ruolo `ispmail` **patcha lo script scaricato** per
+  abilitare comunque `mod_ssl` e quel vhost — altrimenti l'installazione
+  si fermerebbe da sola al controllo finale su Roundcube, prima ancora di
+  arrivare a configurare TLS su Postfix, rspamd, DKIM e le quote.
 - ispmail.sh installa un intero mail server in un solo colpo e non è
   pensato per essere rieseguito da zero: il ruolo `ispmail` lo esegue
   quindi una volta sola per host (marker `/root/.ispmail_installed`).

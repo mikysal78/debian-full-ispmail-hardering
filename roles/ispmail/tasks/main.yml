@@ -21,20 +21,50 @@
       per gli host in [mailservers] prima di procedere.
     quiet: true
 
-- name: Verifica la risoluzione DNS pubblica dell'FQDN (richiesta da certbot)
-  ansible.builtin.command: "getent hosts {{ ispmail_fqdn }}"
-  register: ispmail_dns_check
-  changed_when: false
-  failed_when: false
+- name: Crea la directory del certificato se non esiste ancora (path standard certbot)
+  ansible.builtin.file:
+    path: "{{ ispmail_cert_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: ispmail_cert_fullchain_src != (ispmail_cert_dir + '/fullchain.pem')
 
-- name: Avvisa se l'FQDN non risolve da questo host
-  ansible.builtin.debug:
-    msg: >
-      ATTENZIONE: {{ ispmail_fqdn }} non risolve da questo host. ispmail.sh
-      chiamerà "certbot --apache" per ottenere un certificato Let's Encrypt:
-      senza un DNS pubblico corretto e le porte 80/443 raggiungibili da
-      internet (vedi firewall_allowed_tcp_ports), quel passaggio fallirà.
-  when: ispmail_dns_check.rc != 0
+- name: Copia il certificato dal path del ruolo ansible-dns, se diverso da quello standard
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - { src: "{{ ispmail_cert_fullchain_src }}", dest: "{{ ispmail_cert_dir }}/fullchain.pem" }
+    - { src: "{{ ispmail_cert_privkey_src }}", dest: "{{ ispmail_cert_dir }}/privkey.pem" }
+  when: item.src != item.dest
+
+- name: Verifica che il certificato TLS sia già presente (provisionato es. dal ruolo ansible-dns)
+  ansible.builtin.stat:
+    path: "{{ ispmail_cert_dir }}/{{ item }}"
+  register: ispmail_cert_stat
+  loop:
+    - fullchain.pem
+    - privkey.pem
+
+- name: Blocca se manca il certificato TLS
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+    fail_msg: >
+      Manca {{ item.item }} in {{ ispmail_cert_dir }}: esegui prima il ruolo
+      ansible-dns (o comunque quello che provisiona il certificato Let's
+      Encrypt) per questo FQDN. ispmail.sh usa quel path per Postfix,
+      Dovecot e Apache e chiamerebbe "certbot --apache" da solo se non lo
+      trovasse, cosa che qui non vogliamo (il certificato è gestito altrove).
+    quiet: true
+  loop: "{{ ispmail_cert_stat.results }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 # ispmail.sh configura Postfix in modo incrementale (postconf) ma non ne
 # genera main.cf da zero: si aspetta un pacchetto postfix già preconfigurato
@@ -63,6 +93,22 @@
     owner: root
     group: root
     force: true
+
+# ispmail.sh non chiama mai da solo "a2ensite"/"a2enmod ssl": si aspetta che
+# sia stato "certbot --apache" (chiamato prima di apache_config() nello
+# script) ad abilitare mod_ssl e il vhost 000-default-le-ssl.conf. Visto che
+# qui il certificato è già presente e quella chiamata a certbot viene quindi
+# saltata dallo script stesso, senza questa patch apache_config() fallirebbe
+# al controllo finale "curl https://$FQDN" (Roundcube non raggiungibile) e
+# l'intera installazione si fermerebbe lì, prima di TLS relay/rspamd/DKIM.
+- name: Patch ispmail.sh per abilitare comunque mod_ssl e il vhost Apache
+  ansible.builtin.blockinfile:
+    path: "{{ ispmail_script_path }}"
+    marker: "# {mark} ANSIBLE - abilita mod_ssl e vhost anche senza certbot"
+    insertbefore: '^\s*a2enmod proxy_http -q\s*$'
+    block: |
+      a2enmod ssl -q
+      a2ensite 000-default-le-ssl -q
 
 - name: Esegui ispmail.sh (una sola volta - installa un intero mail server, richiede diversi minuti)
   ansible.builtin.shell: |

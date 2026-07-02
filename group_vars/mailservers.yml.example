@@ -7,4 +7,10 @@ role_mailserver: true
 # mailserver di questo repo, decommenta e valorizza queste righe:
 # mailserver_manage_service: false
 # ispmail_fqdn: "mail.example.com"
-# firewall_allowed_tcp_ports: [80, 443]   # richieste da certbot e Roundcube/rspamd-ui
+# firewall_allowed_tcp_ports: [80, 443]   # servono a Roundcube/rspamd-ui via Apache
+#
+# Se il certificato TLS viene provisionato da un ruolo esterno (es.
+# ansible-dns con validazione DNS-01) invece che da certbot dentro
+# ispmail.sh, indica dove lo trova roles/ispmail (default: /etc/ssl/acme/):
+# ispmail_cert_fullchain_src: "/etc/ssl/acme/{{ ispmail_fqdn }}/fullchain.pem"
+# ispmail_cert_privkey_src: "/etc/ssl/acme/{{ ispmail_fqdn }}/privkey.pem"
