@@ -30,11 +30,19 @@
 # Nessun HTTPS e nessun checksum pubblicati dal progetto per questo download:
 # integrità non verificabile. Valutato e accettato esplicitamente prima di
 # abilitare questo ruolo (vedi README).
+# Il sito (sito personale, non un CDN) risponde in modo incostante a
+# richieste ravvicinate - timeout più alto del default (10s) e retry
+# automatici invece di far fallire subito il play.
 - name: Scarica ISPmail Admin
   ansible.builtin.get_url:
     url: "{{ ispmail_admin_download_url }}"
     dest: "{{ ispmail_admin_archive_path }}"
     mode: "0600"
+    timeout: 30
+  register: ispmail_admin_download
+  until: ispmail_admin_download is succeeded
+  retries: 5
+  delay: 15
 
 - name: Crea la directory di installazione
   ansible.builtin.file:
