@@ -66,23 +66,26 @@ Al primo accesso il server ha solo `root` e nessun firewall. Procedi così:
    - lascia `ssh_password_authentication: "no"` solo se sei sicuro che la
      chiave funzioni; altrimenti impostala temporaneamente a `"yes"` per il
      primo giro e rimettila a `"no"` una volta verificato l'accesso.
-3. Esegui il primo run autenticandoti come root:
+3. Esegui il primo run autenticandoti come root sulla porta 22 di fabbrica
+   (anche se nell'inventario hai già messo `ansible_port=2400` per i run
+   successivi, va sovrascritto per questo primo giro):
    ```bash
-   ansible-playbook playbook.yml -u root -k -e ansible_ssh_pass=xxx
+   ansible-playbook playbook.yml -u root -k -e ansible_ssh_pass=xxx -e ansible_port=22
    ```
-   (o con chiave se il provider l'ha già installata: `-u root`)
+   (o con chiave se il provider l'ha già installata: `-u root -e ansible_port=22`)
 4. **Verifica in un'altra finestra di terminale, PRIMA di chiudere la sessione
    corrente**, che riesci a collegarti con il nuovo utente sulla nuova porta:
    ```bash
-   ssh -p 2400 admin@<ip-server>
+   ssh -p 2400 <harden_admin_user>@<ip-server>
    ```
    Il playbook include un `assert` che blocca l'esecuzione se stai per
    disabilitare sia il login root che l'autenticazione a password senza aver
    configurato un utente admin con chiave — ma la prudenza (secondo terminale
    aperto) resta comunque consigliata quando si cambia la configurazione SSH
    da remoto.
-5. Dai run successivi, aggiorna `ansible.cfg` (`remote_user`) o
-   l'inventario per usare l'utente admin sulla porta 2400.
+5. Dai run successivi aggiungi `ansible_user=<harden_admin_user>
+   ansible_port=2400` alla riga dell'host in `inventory/hosts.ini`, così non
+   devi più passare `-u`/`-e` a mano.
 
 ## Porta SSH
 
