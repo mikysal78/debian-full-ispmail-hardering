@@ -37,10 +37,10 @@
     remote_src: true
     owner: root
     group: root
-    mode: "0644"
+    mode: "{{ item.mode }}"
   loop:
-    - { src: "{{ ispmail_cert_fullchain_src }}", dest: "{{ ispmail_cert_dir }}/fullchain.pem" }
-    - { src: "{{ ispmail_cert_privkey_src }}", dest: "{{ ispmail_cert_dir }}/privkey.pem" }
+    - { src: "{{ ispmail_cert_fullchain_src }}", dest: "{{ ispmail_cert_dir }}/fullchain.pem", mode: "0644" }
+    - { src: "{{ ispmail_cert_privkey_src }}", dest: "{{ ispmail_cert_dir }}/privkey.pem", mode: "0600" }
   when: item.src != item.dest
 
 - name: Verifica che il certificato TLS sia già presente (provisionato es. dal ruolo ansible-dns)
