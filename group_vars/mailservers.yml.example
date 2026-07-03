@@ -3,7 +3,7 @@
 # il ruolo mailserver (Postfix + Dovecot hardenizzati).
 role_mailserver: true
 
-# Se installi la posta con ispmail.sh (vedi ispmail.yml) invece del ruolo
+# Se installi la posta con ispmail.sh (vedi 02-mailserver.yml) invece del ruolo
 # mailserver di questo repo, decommenta e valorizza queste righe:
 # mailserver_manage_service: false
 # ispmail_fqdn: "mail.example.com"        # hostname dei protocolli SMTP/IMAP
