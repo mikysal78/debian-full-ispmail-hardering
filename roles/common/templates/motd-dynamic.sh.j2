@@ -1,0 +1,94 @@
+#!/bin/bash
+# /etc/update-motd.d/10-server
+# Generato da Ansible - NON MODIFICARE MANUALMENTE
+
+HOSTNAME=$(hostname -f)
+OS=$(grep PRETTY_NAME /etc/os-release | cut -d'"' -f2)
+KERNEL=$(uname -r)
+UPTIME=$(uptime -p)
+LOAD=$(cut -d' ' -f1-3 /proc/loadavg)
+MEM_TOTAL=$(free -m | awk '/^Mem:/{print $2}')
+MEM_USED=$(free -m  | awk '/^Mem:/{print $3}')
+DISK=$(df -h / | awk 'NR==2{print $3"/"$2" ("$5")"}')
+LAST_LOGIN=$(last -n1 -F $USER 2>/dev/null | head -1 | awk '{print $3,$4,$5,$6,$7,$8}')
+
+{% if role_mailserver | default(false) %}
+TITLE="Mail Server"
+{% elif role_webserver | default(false) %}
+TITLE="Web Server"
+{% elif role_database | default(false) %}
+TITLE="Database Server"
+{% else %}
+TITLE="Server"
+{% endif %}
+
+# Colori
+G='\033[0;32m'; Y='\033[0;33m'; R='\033[0;31m'; B='\033[0;34m'; N='\033[0m'; BOLD='\033[1m'
+
+svc_status() {
+  local svc="$1" label="$2"
+  local st
+  # systemctl is-active stampa comunque uno stato (inactive/failed/...) su
+  # stdout anche quando esce con codice diverso da zero: un fallback "||"
+  # si sommerebbe a quell'output invece di sostituirlo se il comando non
+  # produce nulla (systemd assente/unit inesistente).
+  st=$(systemctl is-active "$svc" 2>/dev/null)
+  [ -z "$st" ] && st="unknown"
+  if [ "$st" = "active" ]; then
+    printf "  ${B}%-14s${N}${G}● attivo${N}\n" "${label}:"
+  else
+    printf "  ${B}%-14s${N}${R}● %s${N}\n" "${label}:" "${st}"
+  fi
+}
+
+echo ""
+echo -e "${BOLD}╔══════════════════════════════════════════════════════════════╗${N}"
+echo -e "${BOLD}║  ${TITLE} - ${HOSTNAME}${N}"
+echo -e "${BOLD}╚══════════════════════════════════════════════════════════════╝${N}"
+echo ""
+echo -e "  ${B}Sistema:${N}    ${OS}"
+echo -e "  ${B}Kernel:${N}     ${KERNEL}"
+echo -e "  ${B}Uptime:${N}     ${UPTIME}"
+echo -e "  ${B}Load:${N}       ${LOAD}"
+echo -e "  ${B}Memoria:${N}    ${MEM_USED}MB / ${MEM_TOTAL}MB"
+echo -e "  ${B}Disco /:${N}    ${DISK}"
+echo ""
+
+{% if harden_firewall | default(true) %}
+svc_status nftables "nftables"
+{% endif %}
+{% if harden_fail2ban | default(true) %}
+svc_status fail2ban "fail2ban"
+BANNED=$(fail2ban-client status sshd 2>/dev/null | grep "Banned IP list" | sed 's/.*://' | wc -w)
+[ "${BANNED:-0}" -gt 0 ] 2>/dev/null && echo -e "  ${Y}⚠ fail2ban sshd:${N} ${BANNED} IP bannati"
+{% endif %}
+{% if harden_auditd | default(true) %}
+svc_status auditd "auditd"
+{% endif %}
+{% if role_mailserver | default(false) %}
+svc_status postfix "postfix"
+svc_status dovecot "dovecot"
+svc_status apache2 "apache2"
+svc_status mariadb "mariadb"
+svc_status rspamd "rspamd"
+{% endif %}
+{% if role_webserver | default(false) %}
+svc_status nginx "nginx"
+{% endif %}
+{% if role_database | default(false) and not (role_mailserver | default(false)) %}
+svc_status mariadb "mariadb"
+{% endif %}
+
+# Aggiornamenti disponibili
+# grep -c stampa comunque un numero (anche "0") pure quando esce con
+# codice diverso da zero per "nessun match": nessun fallback "||" serve.
+UPDATES=$(apt-get -s upgrade 2>/dev/null | grep -c "^Inst")
+if [ "$UPDATES" -gt 0 ]; then
+    echo ""
+    echo -e "  ${Y}⚠  ${UPDATES} aggiornamenti disponibili - esegui: apt upgrade${N}"
+fi
+
+# Ultimo login
+[ -n "$LAST_LOGIN" ] && echo -e "\n  ${B}Ultimo login:${N} ${LAST_LOGIN}"
+
+echo ""

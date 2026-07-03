@@ -16,11 +16,23 @@
     group: root
     mode: "0644"
 
-- name: Rimuovi informazioni di versione da /etc/motd
+- name: Svuota il MOTD statico (sostituito dallo script dinamico sotto)
   ansible.builtin.copy:
     content: ""
     dest: /etc/motd
     owner: root
     group: root
     mode: "0644"
-    force: false
+
+- name: Distribuisci lo script del MOTD dinamico post-login
+  ansible.builtin.template:
+    src: motd-dynamic.sh.j2
+    dest: /etc/update-motd.d/10-server
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Rimuovi lo script MOTD di default Debian (uname)
+  ansible.builtin.file:
+    path: /etc/update-motd.d/10-uname
+    state: absent
