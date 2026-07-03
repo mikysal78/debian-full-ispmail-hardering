@@ -24,6 +24,7 @@ roles/
   database/    MariaDB: bind locale, niente utenti anonimi/test/root remoto
   ispmail/     scarica ed esegue ispmail.sh (usato da ispmail.yml)
   ispmail_admin/ pannello web opzionale per domini/mailbox/alias (usato da ispmail.yml)
+  ispmail_sni/ certificati TLS dedicati per domini extra via SNI (usato da ispmail.yml)
 ```
 
 ## Setup iniziale (file privati)
@@ -242,6 +243,48 @@ ispmail.sh: `ispmail_fqdn` resta l'hostname "vero" (Postfix/Dovecot/TLS),
 `ispmail_webmail_fqdn` è solo un alias in più per raggiungerlo via browser.
 Anche questo deve risolvere via DNS verso l'host ed essere coperto dal
 certificato TLS.
+
+### Ospitare altri domini con un certificato TLS proprio (SNI)
+
+Per ospitare *altri* domini di posta sullo stesso server (es.
+`utente@altrodominio.it` accanto a quelle di `ispmail_fqdn`) **non serve
+un certificato per dominio**: i client di posta si collegano comunque
+all'hostname del server (`ispmail_fqdn`), che presenta sempre lo stesso
+certificato. Basta aggiungere il dominio in ISPmail Admin (o via SQL) e
+puntarci l'MX via DNS.
+
+Serve un certificato dedicato solo se vuoi che, connettendosi a un
+hostname *specifico* di quel dominio (es. `mail.altrodominio.it`), il
+server presenti il certificato di quel dominio invece di quello di
+`ispmail_fqdn` (TLS SNI - Server Name Indication). In tal caso:
+
+1. Fai emettere un certificato per quel dominio dal ruolo `ansible-dns`
+   (aggiungilo ad `acme_domains`), che lo deposita in `/etc/ssl/acme/`
+   con la stessa convenzione "piatta" già usata per `ispmail_fqdn`.
+2. Punta un record DNS dell'hostname scelto (es. `mail.altrodominio.it`)
+   a questo host.
+3. Configura:
+   ```yaml
+   ispmail_sni_domains:
+     - domain: "altrodominio.it"
+       sni_hostname: "mail.altrodominio.it"
+       cert_name: "altrodominio.it"   # default: = domain
+   ```
+
+Il ruolo `ispmail_sni` configura sia Postfix (`tls_server_sni_maps`) sia
+Dovecot (blocchi `local_name`) per presentare il certificato giusto in
+base all'hostname richiesto dal client. Se il certificato manca ancora in
+`/etc/ssl/acme/`, il ruolo si ferma con un errore esplicito invece di
+proseguire con una configurazione rotta.
+
+**Limite da conoscere**: a differenza del certificato principale (un
+link, si aggiorna da solo ai rinnovi), Postfix per l'SNI richiede un
+unico file con chiave privata + certificato concatenati, che questo
+ruolo *rigenera* a ogni run ma **non si aggiorna automaticamente** al
+rinnovo del certificato lato `ansible-dns`. Rilancia `ansible-playbook
+ispmail.yml` dopo ogni rinnovo di questi domini extra, oppure aggiungi
+una chiamata a questo ruolo nel `reloadcmd`/deploy script di
+`ansible-dns` per quei domini specifici.
 
 ## Whitelist fail2ban (IP/reti mai bannati)
 

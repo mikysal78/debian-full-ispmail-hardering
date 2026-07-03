@@ -29,3 +29,13 @@ role_mailserver: true
 # ispmail_admin_enabled: true
 # ispmail_admin_fqdn: "ispmail.example.com"
 # ispmail_admin_allow_networks: ["203.0.113.0/24"]
+#
+# Domini ospitati che devono presentare un certificato TLS diverso da
+# ispmail_fqdn quando un client si connette al loro hostname (SNI), invece
+# di condividere il certificato del server principale. Serve già un
+# certificato per ognuno in /etc/ssl/acme/ (emesso da ansible-dns) e un
+# DNS che punti sni_hostname a questo host:
+# ispmail_sni_domains:
+#   - domain: "otherdomain.com"
+#     sni_hostname: "mail.otherdomain.com"
+#     cert_name: "otherdomain.com"   # default: = domain

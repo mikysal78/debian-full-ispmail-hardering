@@ -1,0 +1,28 @@
+---
+# Domini ospitati sullo stesso mail server che devono presentare un
+# certificato TLS diverso da quello di ispmail_fqdn quando un client si
+# connette a un hostname specifico (TLS SNI), invece di condividere il
+# certificato del server principale. Esempio:
+#
+# ispmail_sni_domains:
+#   - domain: "romaclubmatera.it"       # nome del dominio (usato per i path locali)
+#     sni_hostname: "mail.romaclubmatera.it"  # hostname che i client richiedono via SNI
+#     cert_name: "romaclubmatera.it"    # nome dei file sotto /etc/ssl/acme/ (default: = domain)
+#
+# Prerequisiti per ogni dominio in lista, NON gestiti da questo ruolo:
+#   - un certificato per quel dominio già emesso dal ruolo ansible-dns in
+#     /etc/ssl/acme/<cert_name>.{fullchain.pem,key} (stessa convenzione
+#     usata da roles/ispmail per il certificato principale)
+#   - un record DNS (A/AAAA/CNAME) di sni_hostname che punti a questo host
+ispmail_sni_domains: []
+
+ispmail_sni_cert_base: "/etc/ssl/acme"
+# Path stabili (link, si aggiornano da soli ai rinnovi) usati direttamente
+# da Dovecot e come sorgente per il chain file combinato di Postfix.
+ispmail_sni_link_dir: "/etc/ssl/mail-sni"
+# Postfix richiede UN SOLO file con chiave privata + certificato
+# concatenati (non file separati come Dovecot): va rigenerato a ogni run
+# di questo ruolo, non si aggiorna da solo al rinnovo del certificato
+# come i link sopra - vedi il promemoria nel task finale.
+ispmail_sni_chain_dir: "/etc/postfix/sni"
+ispmail_sni_map: "/etc/postfix/sni.map"

@@ -1,0 +1,133 @@
+---
+- name: Verifica che ogni dominio SNI abbia domain e sni_hostname
+  ansible.builtin.assert:
+    that:
+      - item.domain is defined
+      - item.sni_hostname is defined
+    fail_msg: >
+      Ogni voce di ispmail_sni_domains richiede "domain" e "sni_hostname"
+      (vedi roles/ispmail_sni/defaults/main.yml per un esempio).
+    quiet: true
+  loop: "{{ ispmail_sni_domains }}"
+  loop_control:
+    label: "{{ item.domain | default('?') }}"
+
+- name: Verifica che il certificato di ogni dominio SNI esista già
+  ansible.builtin.stat:
+    path: "{{ ispmail_sni_cert_base }}/{{ item.0.cert_name | default(item.0.domain) }}.{{ item.1 }}"
+  register: ispmail_sni_cert_stat
+  loop: "{{ ispmail_sni_domains | product(['fullchain.pem', 'key']) | list }}"
+  loop_control:
+    label: "{{ item.0.domain }} ({{ item.1 }})"
+
+- name: Blocca se manca il certificato di un dominio SNI
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+    fail_msg: >
+      Manca {{ item.item.0.cert_name | default(item.item.0.domain) }}.{{ item.item.1 }}
+      in {{ ispmail_sni_cert_base }}: aggiungi {{ item.item.0.domain }} ad
+      acme_domains nel ruolo ansible-dns e riemetti il certificato prima
+      di attivare l'SNI per questo dominio.
+    quiet: true
+  loop: "{{ ispmail_sni_cert_stat.results }}"
+  loop_control:
+    label: "{{ item.item.0.domain }} ({{ item.item.1 }})"
+
+- name: Crea la directory dei link per ogni dominio SNI
+  ansible.builtin.file:
+    path: "{{ ispmail_sni_link_dir }}/{{ item.domain }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ ispmail_sni_domains }}"
+  loop_control:
+    label: "{{ item.domain }}"
+
+# Link, non copia (stesso motivo del certificato principale in
+# roles/ispmail): si aggiornano da soli quando ansible-dns/acme.sh
+# rinnova il certificato. Usati direttamente da Dovecot.
+- name: Collega il fullchain di ogni dominio SNI
+  ansible.builtin.file:
+    src: "{{ ispmail_sni_cert_base }}/{{ item.cert_name | default(item.domain) }}.fullchain.pem"
+    dest: "{{ ispmail_sni_link_dir }}/{{ item.domain }}/fullchain.pem"
+    state: link
+    force: true
+  loop: "{{ ispmail_sni_domains }}"
+  loop_control:
+    label: "{{ item.domain }}"
+
+- name: Collega la chiave privata di ogni dominio SNI
+  ansible.builtin.file:
+    src: "{{ ispmail_sni_cert_base }}/{{ item.cert_name | default(item.domain) }}.key"
+    dest: "{{ ispmail_sni_link_dir }}/{{ item.domain }}/privkey.pem"
+    state: link
+    force: true
+  loop: "{{ ispmail_sni_domains }}"
+  loop_control:
+    label: "{{ item.domain }}"
+
+- name: Crea la directory dei chain file combinati per Postfix
+  ansible.builtin.file:
+    path: "{{ ispmail_sni_chain_dir }}"
+    state: directory
+    owner: root
+    group: postfix
+    mode: "0750"
+  when: ispmail_sni_domains | length > 0
+
+# Postfix (a differenza di Dovecot) richiede per l'SNI un unico file con
+# chiave privata + certificato concatenati. Rigenerato a ogni run: NON si
+# aggiorna da solo al rinnovo del certificato come i link sopra, perché
+# "concatena due file" non è un'operazione che un link può fare da solo.
+# Se vuoi che si aggiorni automaticamente ai rinnovi, aggiungi una chiamata
+# a questo stesso playbook (o solo a questo ruolo) nel reloadcmd/deploy
+# script del ruolo ansible-dns per questi domini.
+- name: Genera il chain file combinato di Postfix per ogni dominio SNI
+  ansible.builtin.copy:
+    content: "{{ lookup('file', ispmail_sni_link_dir + '/' + item.domain + '/privkey.pem') }}\n{{ lookup('file', ispmail_sni_link_dir + '/' + item.domain + '/fullchain.pem') }}"
+    dest: "{{ ispmail_sni_chain_dir }}/{{ item.domain }}.pem"
+    owner: root
+    group: postfix
+    mode: "0640"
+  loop: "{{ ispmail_sni_domains }}"
+  loop_control:
+    label: "{{ item.domain }}"
+  notify: rebuild postfix sni map
+
+- name: Costruisci la mappa SNI di Postfix
+  ansible.builtin.template:
+    src: postfix-sni-map.j2
+    dest: "{{ ispmail_sni_map }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: ispmail_sni_domains | length > 0
+  notify: rebuild postfix sni map
+
+- name: Attiva tls_server_sni_maps in Postfix
+  ansible.builtin.command: postconf -e "tls_server_sni_maps=hash:{{ ispmail_sni_map }}"
+  changed_when: false
+  when: ispmail_sni_domains | length > 0
+  notify: rebuild postfix sni map
+
+- name: Configura i blocchi SNI di Dovecot per i domini aggiuntivi
+  ansible.builtin.template:
+    src: dovecot-sni.conf.j2
+    dest: /etc/dovecot/conf.d/99-sni-domains.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: ispmail_sni_domains | length > 0
+  notify: restart dovecot
+
+- name: Riepilogo domini SNI configurati
+  ansible.builtin.debug:
+    msg: >
+      SNI attivo per {{ ispmail_sni_domains | map(attribute='sni_hostname') | join(', ') }}.
+      Verifica che il DNS di ognuno punti a questo host. Il chain file di
+      Postfix NON si aggiorna da solo ai rinnovi del certificato: rilancia
+      questo ruolo dopo ogni rinnovo, o aggiungilo al reloadcmd di
+      ansible-dns per questi domini.
+  when: ispmail_sni_domains | length > 0

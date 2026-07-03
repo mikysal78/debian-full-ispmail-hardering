@@ -1,0 +1,4 @@
+{{ ansible_managed | comment }}
+{% for d in ispmail_sni_domains %}
+{{ d.sni_hostname }}	{{ ispmail_sni_chain_dir }}/{{ d.domain }}.pem
+{% endfor %}

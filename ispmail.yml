@@ -31,6 +31,10 @@
 # (pannello web per gestire domini/mailbox/alias), raggiungibile solo dalle
 # reti indicate in ispmail_admin_allow_networks. Vedi README per i
 # compromessi di sicurezza del progetto prima di attivarlo.
+#
+# Opzionale: ispmail_sni_domains popola un certificato TLS dedicato (via
+# SNI) per domini ospitati che devono presentare un certificato diverso da
+# ispmail_fqdn - vedi roles/ispmail_sni/defaults/main.yml.
 # =============================================================================
 - name: Installa il mail server con ispmail.sh
   hosts: mailservers
@@ -39,3 +43,5 @@
     - ispmail
     - role: ispmail_admin
       when: ispmail_admin_enabled | default(false)
+    - role: ispmail_sni
+      when: ispmail_sni_domains | default([]) | length > 0

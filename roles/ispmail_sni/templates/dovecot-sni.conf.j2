@@ -1,0 +1,7 @@
+{{ ansible_managed | comment }}
+{% for d in ispmail_sni_domains %}
+local_name {{ d.sni_hostname }} {
+  ssl_cert = <{{ ispmail_sni_link_dir }}/{{ d.domain }}/fullchain.pem
+  ssl_key = <{{ ispmail_sni_link_dir }}/{{ d.domain }}/privkey.pem
+}
+{% endfor %}

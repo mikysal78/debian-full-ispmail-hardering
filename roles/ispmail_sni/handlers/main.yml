@@ -1,0 +1,15 @@
+---
+- name: postmap sni map
+  ansible.builtin.command: "postmap {{ ispmail_sni_map }}"
+  listen: "rebuild postfix sni map"
+
+- name: reload postfix
+  ansible.builtin.service:
+    name: postfix
+    state: reloaded
+  listen: "rebuild postfix sni map"
+
+- name: restart dovecot
+  ansible.builtin.service:
+    name: dovecot
+    state: restarted
