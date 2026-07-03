@@ -1,14 +1,14 @@
-# Hardening server Debian trixie (Ansible)
+# debian-full-ispmail-hardering
 
 Playbook Ansible modulare per l'hardening di server Debian 13 (trixie),
-con ruoli opzionali per web server (nginx), mail server (Postfix +
-Dovecot) e database (MariaDB).
+con ruoli opzionali per web server (nginx), mail server completo via
+ispmail.sh (Postfix + Dovecot + Roundcube + Rspamd) e database (MariaDB).
 
 ## Struttura
 
 ```
-playbook.yml                       # orchestrazione: common -> firewall/fail2ban -> ruoli di servizio
-ispmail.yml                        # playbook standalone: installa Postfix+Dovecot+Roundcube via ispmail.sh
+01-hardening.yml                       # orchestrazione: common -> firewall/fail2ban -> ruoli di servizio
+02-mailserver.yml                        # playbook standalone: installa Postfix+Dovecot+Roundcube via ispmail.sh
 group_vars/all.yml.example         # tutte le opzioni di hardening, con commenti (copia -> all.yml)
 group_vars/webservers.yml.example  # role_webserver: true per il gruppo [webservers]
 group_vars/mailservers.yml.example # role_mailserver: true per il gruppo [mailservers]
@@ -22,9 +22,9 @@ roles/
   webserver/   nginx: header di sicurezza, TLS moderno, no listing
   mailserver/  Postfix + Dovecot: TLS obbligatorio, anti-relay, SASL
   database/    MariaDB: bind locale, niente utenti anonimi/test/root remoto
-  ispmail/     scarica ed esegue ispmail.sh (usato da ispmail.yml)
-  ispmail_admin/ pannello web opzionale per domini/mailbox/alias (usato da ispmail.yml)
-  ispmail_sni/ certificati TLS dedicati per domini extra via SNI (usato da ispmail.yml)
+  ispmail/     scarica ed esegue ispmail.sh (usato da 02-mailserver.yml)
+  ispmail_admin/ pannello web opzionale per domini/mailbox/alias (usato da 02-mailserver.yml)
+  ispmail_sni/ certificati TLS dedicati per domini extra via SNI (usato da 02-mailserver.yml)
 ```
 
 ## Setup iniziale (file privati)
@@ -72,7 +72,7 @@ Al primo accesso il server ha solo `root` e nessun firewall. Procedi così:
    (anche se nell'inventario hai già messo `ansible_port=2400` per i run
    successivi, va sovrascritto per questo primo giro):
    ```bash
-   ansible-playbook playbook.yml -u root -k -e ansible_ssh_pass=xxx -e ansible_port=22
+   ansible-playbook 01-hardening.yml -u root -k -e ansible_ssh_pass=xxx -e ansible_port=22
    ```
    (o con chiave se il provider l'ha già installata: `-u root -e ansible_port=22`)
 4. **Verifica in un'altra finestra di terminale, PRIMA di chiudere la sessione
@@ -118,9 +118,9 @@ forzare i flag per singolo host in `host_vars/<nome-host>.yml`.
 Il ruolo `firewall` legge questi stessi flag per aprire automaticamente
 le porte giuste (80/443 per il web, 25/465/587/143/993/995 per la mail).
 
-### Installare la posta con ispmail.sh (ispmail.yml)
+### Installare la posta con ispmail.sh (02-mailserver.yml)
 
-In alternativa al ruolo `mailserver` di questo playbook, `ispmail.yml` è
+In alternativa al ruolo `mailserver` di questo playbook, `02-mailserver.yml` è
 un playbook standalone che scarica ed esegue
 [ispmail.sh](https://workaround.org/ispmail.sh) di Christoph Haas: installa
 Postfix + Dovecot + Roundcube + Rspamd + MariaDB con TLS via Let's Encrypt,
@@ -143,10 +143,10 @@ certbot.
    `role_webserver` deve restare `false` su questi host: ispmail.sh installa
    Apache, non nginx, e i due andrebbero in conflitto sulle porte 80/443.
 2. Esegui prima il ruolo `ansible-dns` per ottenere il certificato di
-   `ispmail_fqdn` in `/etc/ssl/acme/`, poi `playbook.yml` (hardening +
+   `ispmail_fqdn` in `/etc/ssl/acme/`, poi `01-hardening.yml` (hardening +
    firewall), poi:
    ```bash
-   ansible-playbook ispmail.yml -e ispmail_fqdn=mail.tuodominio.it
+   ansible-playbook 02-mailserver.yml -e ispmail_fqdn=mail.tuodominio.it
    ```
    (oppure valorizza `ispmail_fqdn` in `group_vars/mailservers.yml`/`host_vars`).
 
@@ -159,7 +159,7 @@ Note:
   conseguenza — **verifica anche che quel certificato copra davvero
   l'FQDN del mail server** (SAN o wildcard), altrimenti Postfix/Dovecot/
   Roundcube presenteranno un certificato con nome diverso dall'hostname.
-- Se il certificato manca in `/etc/ssl/acme/` quando lanci `ispmail.yml`,
+- Se il certificato manca in `/etc/ssl/acme/` quando lanci `02-mailserver.yml`,
   il ruolo si ferma subito con un errore esplicito (non lascia che sia
   ispmail.sh a scoprirlo a metà installazione).
 - ispmail.sh normalmente si aspetta che sia `certbot --apache` (chiamato
@@ -188,7 +188,7 @@ Note:
   è affidabile (guida ISPmail nota e mantenuta) ma, trattandosi comunque
   di uno script esterno eseguito con privilegi root, è buona norma
   rivederlo (`cat /usr/local/sbin/ispmail.sh` sul server dopo il primo
-  download) prima di lanciare `ispmail.yml` su un server di produzione.
+  download) prima di lanciare `02-mailserver.yml` su un server di produzione.
 
 ### Gestire domini/mailbox/alias: ISPmail Admin (opzionale)
 
@@ -282,7 +282,7 @@ link, si aggiorna da solo ai rinnovi), Postfix per l'SNI richiede un
 unico file con chiave privata + certificato concatenati, che questo
 ruolo *rigenera* a ogni run ma **non si aggiorna automaticamente** al
 rinnovo del certificato lato `ansible-dns`. Rilancia `ansible-playbook
-ispmail.yml` dopo ogni rinnovo di questi domini extra, oppure aggiungi
+02-mailserver.yml` dopo ogni rinnovo di questi domini extra, oppure aggiungi
 una chiamata a questo ruolo nel `reloadcmd`/deploy script di
 `ansible-dns` per quei domini specifici.
 
@@ -307,9 +307,9 @@ firewall (nftables) limiti la porta SSH alle sole reti fidate, usa
 ## Esecuzione
 
 ```bash
-ansible-playbook playbook.yml
-ansible-playbook playbook.yml --limit webservers   # solo i webserver
-ansible-playbook playbook.yml --check --diff       # dry-run
+ansible-playbook 01-hardening.yml
+ansible-playbook 01-hardening.yml --limit webservers   # solo i webserver
+ansible-playbook 01-hardening.yml --check --diff       # dry-run
 ```
 
 ## Note importanti da leggere prima di andare in produzione

@@ -5,7 +5,7 @@
 # della guida ISPmail di Christoph Haas: https://workaround.org/ispmail.sh
 #
 # Prerequisiti:
-#   - Debian 13 (trixie); esegui prima playbook.yml sull'host per
+#   - Debian 13 (trixie); esegui prima 01-hardening.yml sull'host per
 #     l'hardening di base e il firewall.
 #   - group_vars/all.yml: role_mailserver=true (apre le porte mail nel
 #     firewall) e mailserver_manage_service=false (il ruolo "mailserver"
@@ -18,7 +18,7 @@
 #     non nginx, e i due server web andrebbero in conflitto sulla 80/443.
 #
 # Uso:
-#   ansible-playbook ispmail.yml -e ispmail_fqdn=mail.tuodominio.it
+#   ansible-playbook 02-mailserver.yml -e ispmail_fqdn=mail.tuodominio.it
 # (oppure imposta ispmail_fqdn in group_vars/mailservers.yml/host_vars)
 #
 # Nota: ispmail.sh installa un intero mail server in un colpo solo e non è
