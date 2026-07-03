@@ -77,6 +77,25 @@
     mode: "0750"
   when: ispmail_sni_domains | length > 0
 
+# "lookup('file', ...)" legge sempre dal controller, mai dal target: per
+# leggere i due file dal server remoto serve slurp (poi decodificato qui),
+# non lookup.
+- name: Leggi la chiave privata di ogni dominio SNI dal server
+  ansible.builtin.slurp:
+    src: "{{ ispmail_sni_link_dir }}/{{ item.domain }}/privkey.pem"
+  register: ispmail_sni_privkey_slurp
+  loop: "{{ ispmail_sni_domains }}"
+  loop_control:
+    label: "{{ item.domain }}"
+
+- name: Leggi il certificato di ogni dominio SNI dal server
+  ansible.builtin.slurp:
+    src: "{{ ispmail_sni_link_dir }}/{{ item.domain }}/fullchain.pem"
+  register: ispmail_sni_fullchain_slurp
+  loop: "{{ ispmail_sni_domains }}"
+  loop_control:
+    label: "{{ item.domain }}"
+
 # Postfix (a differenza di Dovecot) richiede per l'SNI un unico file con
 # chiave privata + certificato concatenati. Rigenerato a ogni run: NON si
 # aggiorna da solo al rinnovo del certificato come i link sopra, perché
@@ -86,13 +105,14 @@
 # script del ruolo ansible-dns per questi domini.
 - name: Genera il chain file combinato di Postfix per ogni dominio SNI
   ansible.builtin.copy:
-    content: "{{ lookup('file', ispmail_sni_link_dir + '/' + item.domain + '/privkey.pem') }}\n{{ lookup('file', ispmail_sni_link_dir + '/' + item.domain + '/fullchain.pem') }}"
+    content: "{{ (ispmail_sni_privkey_slurp.results[idx].content | b64decode) ~ (ispmail_sni_fullchain_slurp.results[idx].content | b64decode) }}"
     dest: "{{ ispmail_sni_chain_dir }}/{{ item.domain }}.pem"
     owner: root
     group: postfix
     mode: "0640"
   loop: "{{ ispmail_sni_domains }}"
   loop_control:
+    index_var: idx
     label: "{{ item.domain }}"
   notify: rebuild postfix sni map
 
