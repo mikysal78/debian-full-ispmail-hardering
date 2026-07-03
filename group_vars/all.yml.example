@@ -13,6 +13,12 @@ harden_admin_user: "admin"
 harden_admin_pubkey: "ssh-ed25519 AAAA... tuo-commento"   # obbligatoria se harden_create_admin_user=true
 harden_lock_root_password: true      # blocca la password di root (root resta accessibile solo via sudo)
 
+# Accesso di emergenza indipendente da sudo: login SSH di root solo a
+# chiave, mai password. Utile come "break glass" se PAM/sudo si rompono.
+# Se true, imposta anche ssh_permit_root_login: "prohibit-password" sotto.
+harden_root_ssh_key_login: false
+# harden_root_pubkey: "ssh-ed25519 AAAA... tuo-commento"  # default: harden_admin_pubkey
+
 # --- SSH -------------------------------------------------------------------
 harden_ssh: true
 ssh_port: 2400

@@ -10,6 +10,17 @@
       harden_admin_pubkey, oppure lascia temporaneamente ssh_password_authentication=yes.
     quiet: true
 
+- name: Verifica coerenza tra harden_root_ssh_key_login e ssh_permit_root_login
+  ansible.builtin.assert:
+    that:
+      - not (harden_root_ssh_key_login | default(false)) or ssh_permit_root_login in ['prohibit-password', 'yes']
+    fail_msg: >
+      harden_root_ssh_key_login=true distribuisce una chiave a root, ma
+      ssh_permit_root_login={{ ssh_permit_root_login }} continua a bloccare
+      qualunque login di root via SSH: la chiave resterebbe inutilizzata.
+      Imposta ssh_permit_root_login: "prohibit-password".
+    quiet: true
+
 - name: Distribuisci sshd_config con hardening
   ansible.builtin.template:
     src: sshd_config.j2

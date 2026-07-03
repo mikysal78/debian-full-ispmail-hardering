@@ -22,6 +22,16 @@
     password_lock: true
   when: harden_lock_root_password | default(true)
 
+# Accesso di emergenza: login SSH di root SOLO con chiave (mai con
+# password, controllato comunque da ssh_permit_root_login in sshd_config),
+# indipendente da michele/sudo - utile se PAM/sudo si rompono di nuovo.
+- name: Distribuisci chiave pubblica per l'accesso SSH di emergenza di root
+  ansible.posix.authorized_key:
+    user: root
+    key: "{{ harden_root_pubkey }}"
+    state: present
+  when: harden_root_ssh_key_login | default(false)
+
 - name: Imposta permessi restrittivi sulle home degli utenti
   ansible.builtin.shell: |
     set -o pipefail
