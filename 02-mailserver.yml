@@ -40,6 +40,12 @@
 # ispmail.sh predispone ma non genera da solo - TODO nello script
 # stesso) e mostra a fine run i record DNS TXT da pubblicare per ogni
 # dominio - vedi roles/ispmail_dkim/defaults/main.yml.
+#
+# Opzionale: ispmail_postscreen_enabled=true attiva postscreen con le
+# DNSBL (Spamhaus & co.) davanti alla porta 25 e installa unbound come
+# resolver ricorsivo locale (necessario per Spamhaus) - vedi
+# roles/ispmail_postscreen/defaults/main.yml. Rieseguibile da solo con
+# --tags postscreen.
 # =============================================================================
 - name: Installa il mail server con ispmail.sh
   hosts: mailservers
@@ -52,3 +58,6 @@
       when: ispmail_sni_domains | default([]) | length > 0
     - role: ispmail_dkim
       when: ispmail_dkim_domains | default([]) | length > 0
+    - role: ispmail_postscreen
+      when: ispmail_postscreen_enabled | default(false)
+      tags: [postscreen]

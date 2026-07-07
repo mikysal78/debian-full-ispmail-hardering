@@ -1,0 +1,97 @@
+---
+- name: Installa unbound (resolver ricorsivo locale) e dig per i test
+  ansible.builtin.apt:
+    name:
+      - unbound
+      - bind9-dnsutils
+    state: present
+  when: ispmail_postscreen_manage_resolver
+
+- name: Avvia e abilita unbound
+  ansible.builtin.service:
+    name: unbound
+    state: started
+    enabled: true
+  when: ispmail_postscreen_manage_resolver
+
+# Il test point 127.0.0.2 è sempre listato per definizione: se non torna
+# un codice 127.0.0.x, Spamhaus sta rifiutando le query (resolver pubblico
+# o volume superato) e attivare postscreen sarebbe inutile per la lista
+# principale. Meglio fermarsi qui che scoprirlo dai log.
+- name: Verifica che Spamhaus risponda tramite il resolver locale
+  ansible.builtin.command: dig +short @127.0.0.1 2.0.0.127.zen.spamhaus.org
+  register: ispmail_postscreen_zen_test
+  changed_when: false
+  retries: 3
+  delay: 5
+  until: "'127.0.0.' in ispmail_postscreen_zen_test.stdout"
+  when: ispmail_postscreen_manage_resolver
+
+- name: Punta /etc/resolv.conf al resolver locale
+  ansible.builtin.template:
+    src: resolv.conf.j2
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: ispmail_postscreen_manage_resolver
+
+- name: Leggi la configurazione attuale di master.cf
+  ansible.builtin.command: postconf -M
+  register: ispmail_postscreen_master
+  changed_when: false
+
+# postscreen si mette davanti alla porta 25 al posto di smtpd: fa i suoi
+# controlli (DNSBL, pregreet) e solo chi li passa viene consegnato al vero
+# smtpd, che diventa un servizio interno di tipo "pass". dnsblog esegue le
+# query DNSBL in parallelo, tlsproxy gestisce chi fa STARTTLS durante i
+# test. Le porte submission (587/465) hanno servizi master.cf propri e
+# restano com'erano.
+- name: Metti postscreen davanti alla porta 25 in master.cf
+  ansible.builtin.command: postconf -Me "smtp/inet=smtp inet n - y - 1 postscreen"
+  when: ispmail_postscreen_master.stdout is not search('^smtp\s+inet.*postscreen', multiline=True)
+  notify: reload postfix
+
+- name: Definisci il servizio smtpd interno usato da postscreen
+  ansible.builtin.command: postconf -Me "smtpd/pass=smtpd pass - - y - - smtpd"
+  when: ispmail_postscreen_master.stdout is not search('^smtpd\s+pass', multiline=True)
+  notify: reload postfix
+
+- name: Definisci il servizio dnsblog (query DNSBL per postscreen)
+  ansible.builtin.command: postconf -Me "dnsblog/unix=dnsblog unix - - y - 0 dnsblog"
+  when: ispmail_postscreen_master.stdout is not search('^dnsblog\s+unix', multiline=True)
+  notify: reload postfix
+
+- name: Definisci il servizio tlsproxy (STARTTLS durante i test di postscreen)
+  ansible.builtin.command: postconf -Me "tlsproxy/unix=tlsproxy unix - - y - 0 tlsproxy"
+  when: ispmail_postscreen_master.stdout is not search('^tlsproxy\s+unix', multiline=True)
+  notify: reload postfix
+
+- name: Leggi la configurazione attuale di main.cf
+  ansible.builtin.command: postconf
+  register: ispmail_postscreen_main
+  changed_when: false
+
+- name: Configura i parametri postscreen in main.cf
+  ansible.builtin.command: postconf -e "{{ item.key }}={{ item.value }}"
+  loop: "{{ ispmail_postscreen_params | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  changed_when: (item.key ~ ' = ' ~ item.value) not in ispmail_postscreen_main.stdout
+  notify: reload postfix
+  vars:
+    ispmail_postscreen_params:
+      postscreen_dnsbl_sites: "{{ ispmail_postscreen_dnsbl_sites | join(', ') }}"
+      postscreen_dnsbl_threshold: "{{ ispmail_postscreen_dnsbl_threshold }}"
+      postscreen_dnsbl_action: "{{ ispmail_postscreen_dnsbl_action }}"
+      postscreen_greet_action: "{{ ispmail_postscreen_greet_action }}"
+
+- name: Riepilogo postscreen
+  ansible.builtin.debug:
+    msg: >
+      postscreen attivo sulla porta 25 con
+      {{ ispmail_postscreen_dnsbl_sites | length }} liste DNSBL
+      (soglia {{ ispmail_postscreen_dnsbl_threshold }},
+      azione {{ ispmail_postscreen_dnsbl_action }}).
+      Controlla l'effetto con: grep postscreen /var/log/mail.log
+      (PASS OLD/NEW = ok, DNSBL rank = bloccati).

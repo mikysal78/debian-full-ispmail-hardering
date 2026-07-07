@@ -1,0 +1,47 @@
+---
+# Filtro anti-spam "a monte" con postscreen di Postfix: le connessioni in
+# arrivo sulla porta 25 vengono controllate contro le DNSBL (RBL) e con il
+# test del banner (pregreet) PRIMA di occupare un processo smtpd. Le botnet
+# vengono scartate al costo di qualche query DNS invece di arrivare fino a
+# rspamd. postscreen NON tocca le porte submission (587/465): i client
+# autenticati non passano mai da qui, e le connessioni da mynetworks
+# (localhost compreso) sono esentate di default.
+#
+# Attivazione: ispmail_postscreen_enabled=true in group_vars/host_vars
+# (vedi 02-mailserver.yml).
+
+# Liste DNSBL con relativo peso: si somma il peso di ogni lista in cui
+# l'IP del mittente compare e se il totale raggiunge la soglia la
+# connessione viene rifiutata prima del DATA.
+#   - zen.spamhaus.org: la RBL più affidabile (SBL+XBL+PBL insieme). Peso 3
+#     = basta da sola. La mappatura =127.0.0.[2..11] conta solo i codici di
+#     listing veri: i codici di errore (127.255.255.x, es. "query da
+#     resolver pubblico rifiutata") non fanno bloccare posta legittima.
+#     Uso gratuito per volumi modesti non commerciali; richiede il resolver
+#     ricorsivo locale (vedi sotto), coi resolver pubblici non risponde.
+#   - bl.mailspike.net / bl.spamcop.net: liste "minori" affidabili, peso 2:
+#     nessuna blocca da sola, ma due d'accordo tra loro sì.
+#   - list.dnswl.org: whitelist di mittenti con buona reputazione, peso
+#     negativo: compensa un eventuale falso positivo di una lista minore.
+ispmail_postscreen_dnsbl_sites:
+  - "zen.spamhaus.org=127.0.0.[2..11]*3"
+  - "bl.mailspike.net=127.0.0.[10..12]*2"
+  - "bl.spamcop.net*2"
+  - "list.dnswl.org=127.0.[0..255].[1..3]*-2"
+ispmail_postscreen_dnsbl_threshold: 3
+
+# Cosa fare con chi supera la soglia (dnsbl) o parla prima del banner
+# SMTP (greet, comportamento tipico dei bot): "enforce" rifiuta con 550
+# e logga; per un periodo di sola osservazione usa "ignore" (logga senza
+# bloccare, utile i primi giorni per verificare i pesi sui log reali).
+ispmail_postscreen_dnsbl_action: "enforce"
+ispmail_postscreen_greet_action: "enforce"
+
+# Installa unbound come resolver ricorsivo locale e punta /etc/resolv.conf
+# a 127.0.0.1. Necessario per Spamhaus (che non risponde ai resolver
+# pubblici tipo 8.8.8.8/1.1.1.1) e migliora anche i lookup RBL/SURBL che
+# rspamd fa già per conto suo, penalizzati dagli stessi limiti.
+ispmail_postscreen_manage_resolver: true
+# Dominio di ricerca da mantenere in /etc/resolv.conf ("" = nessuno);
+# di default il dominio del server ricavato da ispmail_fqdn.
+ispmail_postscreen_search_domain: "{{ ispmail_fqdn.split('.')[1:] | join('.') }}"
