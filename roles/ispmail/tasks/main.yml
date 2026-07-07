@@ -144,10 +144,14 @@
     group: root
     mode: "0644"
 
+# Niente umask restrittivo qui: varrebbe per TUTTI i file che ispmail.sh
+# crea (rspamd local.d, dovecot conf.d/sieve, ...) rendendoli illeggibili
+# ai rispettivi servizi (rspamd non partirebbe proprio). L'unico file da
+# proteggere è il log con le password: lo creiamo noi a 0600 prima del tee.
 - name: Esegui ispmail.sh (una sola volta - installa un intero mail server, richiede diversi minuti)
   ansible.builtin.shell: |
     set -euo pipefail
-    umask 077
+    install -m 600 /dev/null {{ ispmail_log_file }}
     echo | {{ ispmail_script_path }} -f {{ ispmail_fqdn }} 2>&1 | tee {{ ispmail_log_file }}
     touch {{ ispmail_marker_file }}
   args:
