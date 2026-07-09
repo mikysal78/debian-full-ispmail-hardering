@@ -159,6 +159,17 @@
     creates: "{{ ispmail_marker_file }}"
   register: ispmail_run
 
+# ispmail.sh sottoscrive/crea in automatico solo Junk e Trash: questo drop-in
+# fa lo stesso per Bozze/Inviata/Archivio (vedi commento nel template).
+- name: Auto-crea le cartelle IMAP standard mancanti (Drafts, Sent, Archive)
+  ansible.builtin.template:
+    src: dovecot-folders.conf.j2
+    dest: /etc/dovecot/conf.d/99-folders-auto.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart dovecot
+
 - name: Crea la directory locale per i segreti generati da ispmail.sh
   ansible.builtin.file:
     path: "{{ ispmail_local_secrets_dir }}"

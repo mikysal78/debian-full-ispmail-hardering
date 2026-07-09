@@ -141,6 +141,9 @@ mail_domain: "example.com"
 mail_networks_trusted: "127.0.0.0/8 [::1]/128"
 mail_enable_submission: true         # porta 587/465 con autenticazione obbligatoria (SMTP/SMTPS)
 mail_enable_pop3: false               # true = abilita POP3S (995); il POP3 in chiaro (110) resta comunque chiuso a firewall
+mail_trash_retention_days: 30         # i messaggi nel Cestino più vecchi di N giorni vengono eliminati (autoexpunge Dovecot)
+mail_junk_retention_days: 30          # come sopra, per la cartella Junk/Spam
+                                      # (solo ruolo "mailserver": gli host ispmail hanno già 30d via ispmail.sh)
 
 # --- Database server (MariaDB) ----------------------------------------------
 role_database: false

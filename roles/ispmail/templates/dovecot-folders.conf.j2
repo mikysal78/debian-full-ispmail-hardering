@@ -1,0 +1,17 @@
+{{ ansible_managed | comment }}
+# Completa le cartelle di default: ispmail.sh crea/sottoscrive già Junk e
+# Trash (con autoexpunge 30d, vedi 99-ispmail-autoexpunge.conf); qui facciamo
+# lo stesso per Bozze, Inviata e Archivio, così ogni client le trova pronte
+# al primo login e le riconosce dal flag SPECIAL-USE (RFC 6154).
+mailbox Drafts {
+  special_use = \Drafts
+  auto = subscribe
+}
+mailbox Sent {
+  special_use = \Sent
+  auto = subscribe
+}
+mailbox Archive {
+  special_use = \Archive
+  auto = subscribe
+}

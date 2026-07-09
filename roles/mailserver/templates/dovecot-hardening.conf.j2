@@ -30,3 +30,31 @@ service auth {
 # --- Mailbox ---
 mail_location = maildir:~/Maildir
 mail_privileged_group = mail
+
+# --- Cartelle di default (create e sottoscritte al primo login) ---
+namespace inbox {
+  inbox = yes
+
+  mailbox Drafts {
+    auto = subscribe
+    special_use = \Drafts
+  }
+  mailbox Sent {
+    auto = subscribe
+    special_use = \Sent
+  }
+  mailbox Junk {
+    auto = subscribe
+    special_use = \Junk
+    mailbox_autoexpunge = {{ mail_junk_retention_days }}d
+  }
+  mailbox Trash {
+    auto = subscribe
+    special_use = \Trash
+    mailbox_autoexpunge = {{ mail_trash_retention_days }}d
+  }
+  mailbox Archive {
+    auto = subscribe
+    special_use = \Archive
+  }
+}
