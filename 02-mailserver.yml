@@ -47,9 +47,10 @@
 # roles/ispmail_postscreen/defaults/main.yml. Rieseguibile da solo con
 # --tags postscreen.
 #
-# Opzionale: ispmail_carddav_enabled=true installa Radicale (CardDAV) con
-# una rubrica personale per mailbox e una condivisa per dominio, integrate
-# in Roundcube via RCMCardDAV e raggiungibili dai client esterni su
+# Opzionale: ispmail_carddav_enabled=true installa Radicale (CardDAV +
+# CalDAV) con rubrica e calendario personali per mailbox e condivisi per
+# dominio; la rubrica è integrata in Roundcube via RCMCardDAV, il
+# calendario è per client esterni (smartphone/Thunderbird) su
 # https://<ispmail_fqdn>/radicale/ - vedi roles/ispmail_carddav/defaults/
 # main.yml. Rieseguibile da solo con --tags carddav.
 # =============================================================================

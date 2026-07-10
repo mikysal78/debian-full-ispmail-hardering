@@ -1,5 +1,6 @@
 {{ ansible_managed | comment }}
-# Ogni utente vede la propria radice e ha pieno accesso alle proprie rubriche
+# Ogni utente vede la propria radice e ha pieno accesso alle proprie
+# collection (rubriche e calendari)
 
 [principal]
 user: .+
@@ -11,8 +12,9 @@ user: .+
 collection: {user}/[^/]+
 permissions: rw
 
-# Rubrica condivisa: gli utenti di un dominio ({0} = il dominio estratto
-# dalla regex su user) leggono e scrivono le collection di "shared@dominio"
+# Rubrica e calendario condivisi: gli utenti di un dominio ({0} = il dominio
+# estratto dalla regex su user) leggono e scrivono le collection di
+# "shared@dominio"
 
 [shared-principal]
 user: .+@(.+)

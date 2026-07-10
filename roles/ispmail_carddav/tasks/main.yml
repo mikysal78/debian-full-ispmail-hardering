@@ -87,9 +87,13 @@
     group: www-data
     mode: "0640"
 
-- name: Attiva il plugin carddav in Roundcube
+- name: Attiva il plugin carddav in Roundcube (e nascondi la rubrica SQL interna)
   ansible.builtin.blockinfile:
     path: /etc/roundcube/config.inc.php
     marker: "// {mark} ANSIBLE MANAGED - plugin carddav"
     block: |
       $config['plugins'][] = 'carddav';
+      // La rubrica interna di Roundcube (solo database locale) duplicherebbe
+      // quella CardDAV: i contatti vivono solo su Radicale, visibili anche
+      // dai client esterni. I dati della rubrica interna restano nel DB.
+      $config['address_book_type'] = '';

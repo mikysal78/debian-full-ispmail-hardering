@@ -3,6 +3,8 @@
 # in Debian) - https://github.com/mstilkerich/rcmcarddav/releases
 ispmail_carddav_rcmcarddav_version: "5.1.3"
 
-# URL base pubblico di Radicale (dietro il proxy Apache del vhost ispmail).
-# Usato dai preset di Roundcube e dai client esterni (smartphone, Thunderbird).
+# URL base pubblico di Radicale, server CardDAV e CalDAV (dietro il proxy
+# Apache del vhost ispmail). Usato dai preset di Roundcube e dai client
+# esterni (smartphone, Thunderbird); il calendario è solo CalDAV, in
+# Roundcube non c'è un plugin calendario pacchettizzato per Debian.
 ispmail_carddav_base_url: "https://{{ ispmail_fqdn }}/radicale"
