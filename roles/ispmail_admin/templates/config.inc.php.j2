@@ -31,7 +31,7 @@ define('IMA_CFG_USE_BCRYPT_HASHES', true);
 ** Enable Quotas
 **/
 define('IMA_CFG_USE_QUOTAS', {{ ispmail_admin_use_quotas | lower }});
-define('IMA_CFG_DEFAULT_QUOTA', 0);
+define('IMA_CFG_DEFAULT_QUOTA', {{ ispmail_admin_default_quota }});
 define('IMA_CFG_QUOTA_STEP', 1073741824);
 
 /**

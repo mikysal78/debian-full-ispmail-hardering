@@ -34,4 +34,8 @@ ispmail_admin_login_user: "admin"
 ispmail_admin_login_password: "{{ lookup('ansible.builtin.password', playbook_dir + '/secrets/' + ispmail_fqdn + '-ima-admin.txt', length=20, chars=['ascii_letters', 'digits']) }}"
 
 ispmail_admin_use_quotas: true       # coerente con la colonna "quota" che ispmail.sh crea in virtual_users
+# Quota (in BYTE) precompilata nel form dei nuovi account. Il pannello mostra
+# "unlimited" per quota=0 ma NON è vero: vale il default globale di Dovecot
+# (ispmail_quota_default del ruolo ispmail) - meglio un valore esplicito.
+ispmail_admin_default_quota: 2147483648   # 2 GiB
 ispmail_admin_support_blacklist: false  # richiede la tabella blacklist_email, non creata da ispmail.sh
