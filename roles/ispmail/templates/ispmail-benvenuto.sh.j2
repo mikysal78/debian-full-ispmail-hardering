@@ -1,0 +1,35 @@
+#!/bin/bash
+{{ ansible_managed | comment }}
+# Invia la mail di benvenuto (template /etc/ispmail/benvenuto.txt) a una o
+# più caselle appena create, personalizzandola con indirizzo e dominio del
+# destinatario. Da usare dopo aver creato la casella (es. da ISPmail Admin):
+#
+#   ispmail-benvenuto nuovo.utente@example.com [altra@casella ...]
+set -euo pipefail
+
+TEMPLATE=/etc/ispmail/benvenuto.txt
+FROM="{{ ispmail_welcome_from }}"
+
+if [ $# -lt 1 ]; then
+  echo "Uso: $(basename "$0") utente@dominio [altra@casella ...]" >&2
+  exit 1
+fi
+
+for dest in "$@"; do
+  dominio=${dest#*@}
+  esiste=$(mysql -N mailserver -e "SELECT COUNT(*) FROM virtual_users WHERE email='${dest//\'/}'")
+  if [ "$esiste" != 1 ]; then
+    echo "attenzione: $dest non esiste nel DB mailserver, salto" >&2
+    continue
+  fi
+  {
+    printf 'From: %s\n' "$FROM"
+    printf 'To: %s\n' "$dest"
+    printf 'Subject: Benvenuto nella tua nuova casella di posta\n'
+    printf 'MIME-Version: 1.0\n'
+    printf 'Content-Type: text/plain; charset=UTF-8\n'
+    printf 'Content-Transfer-Encoding: 8bit\n\n'
+    sed -e "s/__EMAIL__/$dest/g" -e "s/__DOMINIO__/$dominio/g" "$TEMPLATE"
+  } | sendmail -f "$FROM" "$dest"
+  echo "mail di benvenuto inviata a $dest"
+done

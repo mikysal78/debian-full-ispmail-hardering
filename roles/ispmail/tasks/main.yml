@@ -159,6 +159,33 @@
     creates: "{{ ispmail_marker_file }}"
   register: ispmail_run
 
+- name: Crea la directory /etc/ispmail
+  ansible.builtin.file:
+    path: /etc/ispmail
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags: [benvenuto]
+
+- name: Distribuisci il testo della mail di benvenuto
+  ansible.builtin.template:
+    src: benvenuto.txt.j2
+    dest: /etc/ispmail/benvenuto.txt
+    owner: root
+    group: root
+    mode: "0644"
+  tags: [benvenuto]
+
+- name: Installa il comando ispmail-benvenuto
+  ansible.builtin.template:
+    src: ispmail-benvenuto.sh.j2
+    dest: /usr/local/sbin/ispmail-benvenuto
+    owner: root
+    group: root
+    mode: "0755"
+  tags: [benvenuto]
+
 # ispmail.sh sottoscrive/crea in automatico solo Junk e Trash: questo drop-in
 # fa lo stesso per Bozze/Inviata/Archivio (vedi commento nel template).
 - name: Auto-crea le cartelle IMAP standard mancanti (Drafts, Sent, Archive)

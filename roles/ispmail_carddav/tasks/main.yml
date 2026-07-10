@@ -65,6 +65,10 @@
     block: |2
               RewriteEngine On
               RewriteRule ^/radicale$ /radicale/ [R,L]
+              # Autodiscovery DAV (RFC 6764): iPhone/DAVx5 trovano rubrica e
+              # calendario indicando solo il nome del server
+              RewriteRule ^/\.well-known/carddav$ /radicale/ [R=301,L]
+              RewriteRule ^/\.well-known/caldav$ /radicale/ [R=301,L]
               <Location "/radicale/">
                       ProxyPass http://127.0.0.1:5232/ retry=0
                       ProxyPassReverse http://127.0.0.1:5232/

@@ -1,0 +1,88 @@
+{#
+  NIENTE intestazione ansible_managed qui: questo file È il corpo della mail.
+
+  Testo della mail di benvenuto inviata da /usr/local/sbin/ispmail-benvenuto.
+  I segnaposto __EMAIL__ e __DOMINIO__ vengono sostituiti dallo script al
+  momento dell'invio con l'indirizzo del destinatario e il suo dominio.
+  Elenca SOLO i servizi realmente attivi: IMAP 993/143, SMTP 587/465,
+  webmail, CardDAV/CalDAV. Niente POP3: non è in ascolto su questo host.
+#}
+Ciao e benvenuto/a!
+
+La tua nuova casella di posta __EMAIL__ è pronta. Qui sotto trovi
+tutto quello che serve per usarla dal browser, dal telefono o da un
+programma di posta.
+
+WEBMAIL
+-------
+Dal browser: https://{{ ispmail_webmail_fqdn }}
+Nome utente: __EMAIL__ (l'indirizzo completo)
+Password: quella che ti è stata consegnata.
+
+PROGRAMMI DI POSTA (Thunderbird, Outlook, app dello smartphone)
+---------------------------------------------------------------
+Quasi tutti si configurano da soli inserendo indirizzo e password.
+Se servono i parametri manuali:
+
+  Posta in arrivo (IMAP)
+    server: {{ ispmail_fqdn }}
+    porta:  993 con SSL/TLS (consigliata)
+            oppure 143 con STARTTLS
+  Posta in uscita (SMTP)
+    server: {{ ispmail_fqdn }}
+    porta:  587 con STARTTLS (consigliata)
+            oppure 465 con SSL/TLS
+  Nome utente: sempre l'indirizzo completo __EMAIL__
+
+CARTELLE
+--------
+Bozze, Inviata, Spam, Cestino e Archivio si creano da sole al primo
+accesso. La posta indesiderata viene spostata automaticamente nella
+cartella Spam: dagli un'occhiata ogni tanto.
+Attenzione: i messaggi in Spam e Cestino vengono eliminati
+automaticamente dopo 30 giorni.
+
+RUBRICA
+-------
+Hai due rubriche già pronte:
+  - "Rubrica personale": solo tua
+  - "Condivisa (__DOMINIO__)": in comune con gli altri utenti di
+    __DOMINIO__ - i contatti che aggiungi li vedono anche loro
+In webmail le trovi già configurate nella sezione Rubrica. Sul
+telefono e nei programmi di posta si sincronizzano via CardDAV
+(istruzioni sotto).
+
+CALENDARIO
+----------
+Hai anche un calendario personale e uno condiviso con gli utenti di
+__DOMINIO__. Il calendario NON è presente nella webmail: si usa dal
+telefono o da un programma come Thunderbird, via CalDAV (istruzioni
+sotto).
+
+SINCRONIZZARE RUBRICA E CALENDARIO SUI TUOI DISPOSITIVI
+-------------------------------------------------------
+Server: {{ ispmail_fqdn }}
+Nome utente e password: quelli della casella.
+
+  - iPhone/iPad: Impostazioni > App > Calendario > Account >
+    Aggiungi account > Altro > "Aggiungi account CalDAV" (per il
+    calendario) e "Aggiungi account CardDAV" (per la rubrica).
+    Come server basta indicare {{ ispmail_fqdn }}.
+
+  - Android: installa l'app DAVx5 (Google Play o F-Droid), poi
+    aggiungi un account scegliendo "Accesso con URL e nome utente"
+    con URL {{ ispmail_carddav_base_url | default('https://' + ispmail_fqdn + '/radicale') }}/
+    Rubrica e calendario personali compaiono da soli; per vedere
+    anche quelli condivisi aggiungi queste due raccolte:
+      {{ ispmail_carddav_base_url | default('https://' + ispmail_fqdn + '/radicale') }}/shared@__DOMINIO__/contacts/
+      {{ ispmail_carddav_base_url | default('https://' + ispmail_fqdn + '/radicale') }}/shared@__DOMINIO__/calendar/
+
+  - Thunderbird: per la rubrica: Rubrica > Nuova rubrica CardDAV;
+    per il calendario: Nuovo calendario > Sulla rete. In entrambi i
+    casi inserisci {{ ispmail_fqdn }} come server (o gli URL qui
+    sopra per rubrica e calendario condivisi) e le credenziali
+    della casella.
+
+Per qualsiasi problema rivolgiti al tuo amministratore.
+
+Buon lavoro!

@@ -25,6 +25,11 @@ ispmail_log_file: "/root/ispmail-install-{{ ispmail_fqdn }}.log"
 # server. La directory NON deve mai finire in un repo pubblico.
 ispmail_local_secrets_dir: "{{ playbook_dir }}/secrets"
 
+# Mittente della mail di benvenuto inviata con "ispmail-benvenuto
+# utente@dominio" (default: postmaster del dominio dell'FQDN, es.
+# postmaster@example.com per mail.example.com)
+ispmail_welcome_from: "postmaster@{{ ispmail_fqdn.split('.', 1)[1] }}"
+
 # --- Certificato TLS ---------------------------------------------------
 # ispmail.sh usa ovunque nel codice il path standard di certbot
 # (/etc/letsencrypt/live/<fqdn>/{fullchain,privkey}.pem) e chiama
