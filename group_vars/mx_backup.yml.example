@@ -7,8 +7,21 @@ mx_backup_primary_host: "mail.example.com"  # server primario a cui fare da back
 mx_backup_relay_domains:
   - "example.com"
 
+# role_mailserver è true in all.yml (per mail01): qui va spento, altrimenti
+# firewall e fail2ban aprono/monitorano IMAP/POP3/submission che su un
+# backup MX non esistono.
+role_mailserver: false
 firewall_allowed_tcp_ports: [25]   # SMTP, non coperto da role_mailserver qui
+firewall_allow_dhcp_client: true   # IPv4 via DHCP (VPS OVH/cloud-init): senza, niente rete al reboot
 
 # Se il certificato TLS non segue la convenzione standard
 # /etc/ssl/acme/<mx_backup_fqdn>.{fullchain.pem,key}:
 # mx_backup_cert_name: "mx2.example.com"
+
+# fail2ban: se Ansible raggiunge questo host da un IP pubblico (es. un VPS
+# esterno alla tua rete), aggiungilo per non bannarti da solo. Sostituisce
+# la lista di all.yml, quindi ripeti anche quelle voci.
+# fail2ban_ignoreip:
+#   - "127.0.0.1/8"
+#   - "::1"
+#   - "203.0.113.5"

@@ -8,6 +8,14 @@ mx_backup_fqdn: ""                # hostname di QUESTO server secondario
 mx_backup_primary_host: ""        # hostname/IP del server primario (destinazione del relay)
 mx_backup_relay_domains: []       # domini per cui fare da backup, es. ["ninux-nnxx.it"]
 
+# "all" = IPv4 + IPv6; metti "ipv4" se l'host non ha IPv6 (o il suo
+# hostname non ha un record AAAA).
+mx_backup_inet_protocols: "all"
+
+# LLMNR (systemd-resolved, porta 5355) su un server pubblico risponde a
+# chiunque col nome dell'host e non serve a nulla: disattivato.
+mx_backup_disable_llmnr: true
+
 # --- Certificato TLS -----------------------------------------------------
 # Stessa convenzione "piatta" di roles/ispmail: /etc/ssl/acme/<nome>.{fullchain.pem,key},
 # emesso dal ruolo ansible-dns. Va fatto per questo hostname PRIMA di

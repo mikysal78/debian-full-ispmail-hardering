@@ -3,6 +3,16 @@
   ansible.builtin.command: postmap /etc/postfix/mx_backup_transport
   listen: "rebuild mx_backup transport"
 
+- name: restart postfix
+  ansible.builtin.service:
+    name: postfix
+    state: restarted
+
+- name: restart systemd-resolved
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: restarted
+
 - name: reload postfix
   ansible.builtin.service:
     name: postfix

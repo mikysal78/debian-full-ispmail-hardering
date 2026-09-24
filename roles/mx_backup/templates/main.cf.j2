@@ -7,7 +7,9 @@ myorigin = $myhostname
 mydestination =
 local_transport = error:local delivery disabled on backup MX
 inet_interfaces = all
-inet_protocols = ipv4
+# IPv4 + IPv6: mx ha un record AAAA pubblicato (e PTR IPv6), che senza un
+# listener IPv6 fa fallire il primo tentativo di chi consegna in IPv6.
+inet_protocols = {{ mx_backup_inet_protocols }}
 
 compatibility_level = 3
 biff = no

@@ -9,14 +9,23 @@
 # dell'inventario finché non ce lo aggiungi tu.
 #
 # Prerequisiti:
-#   - Esegui prima 01-hardening.yml sull'host.
+#   - Firewall (nftables) e fail2ban vengono applicati da questo playbook.
+#     01-hardening.yml (ruolo common) va eseguito sull'host SOLO se Ansible
+#     vi accede con un utente sudo non-root: common disabilita il login SSH
+#     di root e blocca la sua password.
 #   - Un certificato TLS per mx_backup_fqdn già emesso dal ruolo
 #     ansible-dns in /etc/ssl/acme/ (stessa convenzione di roles/ispmail).
 #   - Un record MX secondario (priorità più bassa, cioè numero più alto)
 #     per ogni dominio in mx_backup_relay_domains, che punti a
 #     mx_backup_fqdn.
-#   - Porta 25/tcp aperta sul firewall di questo host
-#     (firewall_allowed_tcp_ports: [25]).
+#   - firewall_allowed_tcp_ports: [25] per questo host (SMTP; SSH su
+#     ssh_port è sempre aperto dal ruolo firewall).
+#   - Nessuna console di emergenza? Prima di attivare il firewall la prima
+#     volta, programma un rollback automatico sull'host, es.:
+#       systemd-run --on-active=10m --unit=fw-rollback \
+#         sh -c 'nft flush ruleset; systemctl disable --now nftables'
+#     e annullalo (systemctl stop fw-rollback.timer) dopo aver verificato
+#     un NUOVO login SSH.
 #
 # ATTENZIONE - backscatter: questa configurazione valida i destinatari
 # solo a livello di dominio, non di singola casella - vedi il commento in
@@ -32,3 +41,9 @@
   become: true
   roles:
     - mx_backup
+    - role: firewall
+      when: harden_firewall | default(true)
+      tags: [firewall]
+    - role: fail2ban
+      when: harden_fail2ban | default(true)
+      tags: [fail2ban]

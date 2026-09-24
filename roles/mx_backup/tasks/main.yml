@@ -76,7 +76,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: reload postfix
+  notify: restart postfix  # inet_protocols cambia solo con un restart
 
 - name: Distribuisci la mappa di transport per i domini di backup
   ansible.builtin.template:
@@ -93,11 +93,32 @@
     enabled: true
     state: started
 
-- name: "Promemoria: apri la porta 25 sul firewall di questo host"
+- name: Crea la directory drop-in di systemd-resolved
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: mx_backup_disable_llmnr
+
+- name: Disattiva LLMNR e mDNS in systemd-resolved
+  ansible.builtin.copy:
+    dest: /etc/systemd/resolved.conf.d/no-llmnr.conf
+    content: |
+      # Gestito da Ansible (ruolo mx_backup)
+      [Resolve]
+      LLMNR=no
+      MulticastDNS=no
+    owner: root
+    group: root
+    mode: "0644"
+  when: mx_backup_disable_llmnr
+  notify: restart systemd-resolved
+
+- name: "Promemoria: record MX secondario"
   ansible.builtin.debug:
     msg: >
-      Ricordati di aggiungere 25 a firewall_allowed_tcp_ports per questo
-      host (non è coperto automaticamente da role_mailserver, che qui è
-      false), e di impostare un record MX secondario a priorità più bassa
+      Ricordati di impostare un record MX secondario a priorità più bassa
       su {{ mx_backup_relay_domains | join(', ') }} che punti a
       {{ mx_backup_fqdn }}.
