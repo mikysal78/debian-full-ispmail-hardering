@@ -81,6 +81,12 @@ table inet filter {
         udp dport { {{ firewall_allowed_udp_ports | join(', ') }} } ct state new accept
 {% endif %}
 
+        # Rumore di rete locale (broadcast/multicast, DHCP di altri host):
+        # scartato senza log, altrimenti occupa quasi tutto il rate limit
+        # del log e nasconde i tentativi di connessione veri.
+        fib daddr type { broadcast, multicast } counter drop
+        udp dport { 67, 68, 546, 547 } counter drop
+
         # Tutto il resto viene loggato e scartato
         limit rate 5/minute log prefix "nft-drop-input: " level info
         counter drop
