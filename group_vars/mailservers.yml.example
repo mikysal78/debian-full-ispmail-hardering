@@ -62,10 +62,12 @@ role_mailserver: true
 #     cert_name: "otherdomain.com"   # default: = domain
 #
 # Per ogni dominio di ispmail_sni_domains viene pubblicato anche
-# https://autoconfig.<dominio>/mail/config-v1.1.xml (ruolo
+# https://autoconfig.<dominio>/mail/config-v1.1.xml e, per Outlook,
+# https://autodiscover.<dominio>/autodiscover/autodiscover.xml (ruolo
 # ispmail_autoconfig): i client propongono da soli sni_hostname come
-# server IMAP/SMTP e l'indirizzo completo come utente. Serve il record
-# DNS autoconfig.<dominio> (CNAME verso sni_hostname). Per spegnerlo:
+# server IMAP/SMTP e l'indirizzo completo come utente. Servono i record
+# DNS autoconfig.<dominio> e autodiscover.<dominio> (CNAME verso
+# sni_hostname). Per spegnerlo:
 # ispmail_autoconfig_enabled: false
 #
 # Sempre per questi domini, Roundcube risponde anche su

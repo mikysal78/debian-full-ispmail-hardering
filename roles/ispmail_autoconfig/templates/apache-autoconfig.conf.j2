@@ -1,17 +1,23 @@
 {{ ansible_managed | comment }}
-# Un vhost per dominio: serve solo /mail/config-v1.1.xml, con il
-# certificato del dominio (il vhost principale ha quello di ispmail_fqdn,
-# che il client rifiuterebbe per autoconfig.<altro dominio>).
+# Un vhost per dominio: serve solo /mail/config-v1.1.xml (Thunderbird &
+# co.) e /autodiscover/autodiscover.xml (Outlook), con il certificato del
+# dominio (il vhost principale ha quello di ispmail_fqdn, che il client
+# rifiuterebbe per autoconfig.<altro dominio>).
 {% for d in ispmail_sni_domains %}
 
 <VirtualHost *:443>
 	ServerName autoconfig.{{ d.domain }}
+	ServerAlias autodiscover.{{ d.domain }}
 	DocumentRoot {{ ispmail_autoconfig_root }}/{{ d.domain }}
 	SSLCertificateFile {{ ispmail_sni_link_dir }}/{{ d.domain }}/fullchain.pem
 	SSLCertificateKeyFile {{ ispmail_sni_link_dir }}/{{ d.domain }}/privkey.pem
 	Include /etc/letsencrypt/options-ssl-apache.conf
 	ErrorLog ${APACHE_LOG_DIR}/error.log
 	CustomLog ${APACHE_LOG_DIR}/access.log combined
+	# Outlook chiede /autodiscover/autodiscover.xml o /Autodiscover/
+	# Autodiscover.xml: la risposta dipende dall'indirizzo, quindi è PHP
+	RewriteEngine On
+	RewriteRule ^/autodiscover/autodiscover\.xml$ /autodiscover/autodiscover.php [NC,L]
 	<Directory {{ ispmail_autoconfig_root }}/{{ d.domain }}>
 		Options None
 		AllowOverride None

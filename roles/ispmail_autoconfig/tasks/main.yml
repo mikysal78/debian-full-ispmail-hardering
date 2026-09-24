@@ -21,6 +21,28 @@
   loop_control:
     label: "{{ item.domain }}"
 
+- name: Crea la directory dell'autodiscover di ogni dominio
+  ansible.builtin.file:
+    path: "{{ ispmail_autoconfig_root }}/{{ item.domain }}/autodiscover"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ ispmail_sni_domains }}"
+  loop_control:
+    label: "{{ item.domain }}"
+
+- name: Genera lo script autodiscover di Outlook di ogni dominio
+  ansible.builtin.template:
+    src: autodiscover.php.j2
+    dest: "{{ ispmail_autoconfig_root }}/{{ item.domain }}/autodiscover/autodiscover.php"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ ispmail_sni_domains }}"
+  loop_control:
+    label: "{{ item.domain }}"
+
 - name: Configura i vhost autoconfig.<dominio> in Apache
   ansible.builtin.template:
     src: apache-autoconfig.conf.j2
@@ -29,6 +51,7 @@
     group: root
     mode: "0644"
   register: ispmail_autoconfig_vhost
+  notify: reload apache
 
 - name: Abilita il sito ispmail-autoconfig
   ansible.builtin.command: a2ensite -q ispmail-autoconfig
@@ -36,10 +59,10 @@
     creates: /etc/apache2/sites-enabled/ispmail-autoconfig.conf
   notify: reload apache
 
-# Un errore nel vhost farebbe fallire il reload e, al primo riavvio,
-# fermerebbe anche Roundcube: meglio bloccarsi qui.
+# Il reload di Apache (handler) parte solo a fine play: un errore nel
+# vhost lo farebbe fallire e, al primo riavvio, fermerebbe anche la
+# webmail principale. Meglio bloccarsi qui, prima del reload.
 - name: Verifica la configurazione di Apache
   ansible.builtin.command: apache2ctl configtest
   changed_when: false
   when: ispmail_autoconfig_vhost is changed
-  notify: reload apache

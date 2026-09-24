@@ -5,15 +5,22 @@
 # server, porte, cifratura e formato del nome utente. Senza, il client
 # tira a indovinare e propone come utente la sola parte prima della "@",
 # mentre Dovecot vuole l'indirizzo completo. Lo leggono Thunderbird,
-# Thunderbird per Android/K-9, Evolution, KMail e altri; Outlook usa invece
-# "autodiscover" e Apple i profili .mobileconfig (non gestiti qui).
+# Thunderbird per Android/K-9, Evolution, KMail e altri.
+#
+# Per Outlook (desktop per Windows) lo stesso vhost risponde anche come
+# autodiscover.<dominio>: Outlook manda in POST l'indirizzo a
+#   https://autodiscover.<dominio>/autodiscover/autodiscover.xml
+# e riceve IMAP 993 e SMTP 465 con l'indirizzo completo come utente. Il
+# "nuovo Outlook" e Outlook mobile passano dai server Microsoft e possono
+# ignorarlo. I profili .mobileconfig di Apple non sono gestiti qui.
 #
 # Un vhost HTTPS autoconfig.<dominio> per ogni voce di ispmail_sni_domains,
 # con il certificato del dominio già collegato dal ruolo ispmail_sni; come
 # server IMAP/SMTP indica lo sni_hostname del dominio (mail.<dominio>).
 #
-# Prerequisito, NON gestito qui: un record DNS autoconfig.<dominio> (A o
-# CNAME verso mail.<dominio>) nella zona del ruolo ansible-dns.
+# Prerequisito, NON gestito qui: i record DNS autoconfig.<dominio> e
+# autodiscover.<dominio> (A o CNAME verso mail.<dominio>) nella zona del
+# ruolo ansible-dns.
 ispmail_autoconfig_enabled: true
 
 ispmail_autoconfig_root: "/var/www/autoconfig"
