@@ -207,6 +207,36 @@
     mode: "0644"
   notify: restart dovecot
 
+# POP3S (995) opzionale, con la stessa variabile che apre la porta nel
+# ruolo firewall. La configurazione va PRIMA del pacchetto: dovecot-pop3d
+# abilita subito pop3 e, senza questo file, ascolterebbe anche sulla 110
+# in chiaro fino al restart.
+- name: Configura Dovecot per il solo POP3S (niente POP3 in chiaro)
+  ansible.builtin.template:
+    src: dovecot-pop3s.conf.j2
+    dest: /etc/dovecot/conf.d/99-zz-pop3s.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: mail_enable_pop3 | default(false)
+  notify: restart dovecot
+  tags: [pop3]
+
+- name: Installa/rimuovi il supporto POP3 di Dovecot
+  ansible.builtin.apt:
+    name: dovecot-pop3d
+    state: "{{ 'present' if mail_enable_pop3 | default(false) else 'absent' }}"
+  notify: restart dovecot
+  tags: [pop3]
+
+- name: Rimuovi la configurazione POP3S se POP3 è disattivato
+  ansible.builtin.file:
+    path: /etc/dovecot/conf.d/99-zz-pop3s.conf
+    state: absent
+  when: not (mail_enable_pop3 | default(false))
+  notify: restart dovecot
+  tags: [pop3]
+
 - name: Crea la directory locale per i segreti generati da ispmail.sh
   ansible.builtin.file:
     path: "{{ ispmail_local_secrets_dir }}"

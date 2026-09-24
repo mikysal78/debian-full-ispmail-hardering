@@ -1,0 +1,13 @@
+{{ ansible_managed | comment }}
+# Solo POP3S (995, TLS implicito): il listener POP3 in chiaro (110) è
+# spento qui, non solo chiuso a firewall. Il protocollo pop3 viene
+# abilitato da dovecot-pop3d (/usr/share/dovecot/protocols.d/pop3d.protocol).
+service pop3-login {
+  inet_listener pop3 {
+    port = 0
+  }
+  inet_listener pop3s {
+    port = 995
+    ssl = yes
+  }
+}
