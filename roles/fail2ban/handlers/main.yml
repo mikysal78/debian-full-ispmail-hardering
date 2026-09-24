@@ -1,5 +1,9 @@
 ---
+# Anche dopo un restart di nftables: il template del ruolo firewall parte
+# con "flush ruleset", che cancella pure la tabella dei ban di fail2ban.
+# (I handler girano nell'ordine in cui sono definiti: firewall prima.)
 - name: restart fail2ban
   ansible.builtin.service:
     name: fail2ban
     state: restarted
+  listen: restart nftables

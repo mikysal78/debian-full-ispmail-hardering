@@ -15,8 +15,10 @@
   roles:
     - role: firewall
       when: harden_firewall | default(true)
+      tags: [firewall]
     - role: fail2ban
       when: harden_fail2ban | default(true)
+      tags: [fail2ban]
 
 - name: Web server (nginx)
   hosts: webservers

@@ -5,6 +5,19 @@ flush ruleset
 
 table inet filter {
 
+    # Contatori per singolo IP sorgente del rate limit SSH: un limite
+    # globale verrebbe saturato dai bot, bloccando anche l'amministratore.
+    set ssh_ratelimit_v4 {
+        type ipv4_addr
+        flags dynamic
+        timeout 1m
+    }
+    set ssh_ratelimit_v6 {
+        type ipv6_addr
+        flags dynamic
+        timeout 1m
+    }
+
     chain input {
         type filter hook input priority 0; policy {{ firewall_default_policy_input }};
 
@@ -21,6 +34,13 @@ table inet filter {
         # ICMPv6 essenziale per il corretto funzionamento di IPv6
         ip6 nexthdr icmpv6 icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit, nd-router-advert } accept
 
+{% if firewall_allow_dhcp_client %}
+        # Risposte DHCPv4 (OFFER/ACK): all'avvio arrivano prima che conntrack
+        # le possa associare alla richiesta, e senza questa regola l'host
+        # resta senza IPv4 al primo reboot.
+        udp sport 67 udp dport 68 accept
+{% endif %}
+
 {% if firewall_allow_ssh_from | length > 0 %}
         # SSH ristretto alle sole sorgenti autorizzate
 {% for src in firewall_allow_ssh_from %}
@@ -28,8 +48,10 @@ table inet filter {
 {% endfor %}
 {% else %}
         # SSH aperto a tutti gli indirizzi, con rate limiting anti brute-force
-        # (fail2ban fornisce comunque una protezione aggiuntiva persistente)
-        tcp dport {{ ssh_port }} ct state new limit rate 15/minute accept
+        # per singolo IP (fail2ban fornisce comunque una protezione
+        # aggiuntiva persistente)
+        tcp dport {{ ssh_port }} ct state new update @ssh_ratelimit_v4 { ip saddr limit rate 15/minute } accept
+        tcp dport {{ ssh_port }} ct state new update @ssh_ratelimit_v6 { ip6 saddr limit rate 15/minute } accept
 {% endif %}
 
 {% if role_webserver | default(false) %}
