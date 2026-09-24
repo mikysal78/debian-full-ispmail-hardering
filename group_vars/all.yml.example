@@ -144,6 +144,7 @@ mail_enable_pop3: false               # true = POP3S (995) in Dovecot + firewall
 mail_trash_retention_days: 30         # i messaggi nel Cestino più vecchi di N giorni vengono eliminati (autoexpunge Dovecot)
 mail_junk_retention_days: 30          # come sopra, per la cartella Junk/Spam
                                       # (solo ruolo "mailserver": gli host ispmail hanno già 30d via ispmail.sh)
+ispmail_sieve_debug: false            # true = log di debug di Sieve in Dovecot (molto verboso); solo temporaneo per indagare su un filtro
 
 # --- Database server (MariaDB) ----------------------------------------------
 role_database: false

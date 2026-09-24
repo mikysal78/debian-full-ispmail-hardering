@@ -56,3 +56,8 @@ ispmail_cert_dir: "/etc/letsencrypt/live/{{ ispmail_fqdn }}"
 ispmail_cert_name: "{{ ispmail_fqdn }}"
 ispmail_cert_fullchain_src: "/etc/ssl/acme/{{ ispmail_cert_name }}.fullchain.pem"
 ispmail_cert_privkey_src: "/etc/ssl/acme/{{ ispmail_cert_name }}.key"
+
+# Log di debug di Sieve (log_debug=category=sieve), che ispmail.sh lascia
+# attivo: molto verboso, con Message-ID e dettagli dei filtri di ogni
+# casella. true solo temporaneamente, per indagare su un filtro.
+ispmail_sieve_debug: false

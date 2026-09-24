@@ -207,6 +207,31 @@
     mode: "0644"
   notify: restart dovecot
 
+# ispmail.sh lascia attivo il debug di Sieve (log_debug=category=sieve):
+# centinaia di righe al giorno nel journal, con Message-ID e dettagli
+# delle regole di ogni casella. Spento di default, riattivabile per il
+# tempo di un debug con ispmail_sieve_debug=true.
+- name: Attiva/disattiva il log di debug di Sieve in Dovecot
+  ansible.builtin.copy:
+    dest: /etc/dovecot/conf.d/99-ispmail-sieve-debug.conf
+    content: |
+      # Gestito da Ansible (ruolo ispmail, ispmail_sieve_debug)
+      log_debug=category=sieve
+    owner: root
+    group: root
+    mode: "0644"
+  when: ispmail_sieve_debug
+  notify: restart dovecot
+  tags: [sieve-debug]
+
+- name: Rimuovi il log di debug di Sieve lasciato da ispmail.sh
+  ansible.builtin.file:
+    path: /etc/dovecot/conf.d/99-ispmail-sieve-debug.conf
+    state: absent
+  when: not ispmail_sieve_debug
+  notify: restart dovecot
+  tags: [sieve-debug]
+
 # POP3S (995) opzionale, con la stessa variabile che apre la porta nel
 # ruolo firewall. La configurazione va PRIMA del pacchetto: dovecot-pop3d
 # abilita subito pop3 e, senza questo file, ascolterebbe anche sulla 110
