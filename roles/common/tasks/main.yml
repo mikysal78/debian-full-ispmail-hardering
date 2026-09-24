@@ -19,6 +19,14 @@
   when: common_manage_hosts | default(false)
   tags: [hosts]
 
+- name: Includi task - /etc/network/interfaces
+  ansible.builtin.include_tasks:
+    file: interfaces.yml
+    apply:
+      tags: [interfaces]
+  when: common_manage_interfaces | default(false)
+  tags: [interfaces]
+
 - name: Includi task - hardening SSH
   ansible.builtin.include_tasks: ssh.yml
   when: harden_ssh | default(true)

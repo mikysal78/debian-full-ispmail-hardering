@@ -33,6 +33,28 @@ common_hosts_entries: []
 #   - "10.0.0.11        mail.example.com mail"
 #   - "2001:db8::11     mail.example.com mail"
 
+# Gestione di /etc/network/interfaces (ifupdown, opt-in: di default il
+# file non viene toccato). Una sola "gateway" per famiglia (inet/inet6)
+# su tutto l'host: una seconda fa fallire ifup@<iface> al boot. Il file
+# viene solo scritto (con backup), la rete NON viene riavviata: vale dal
+# prossimo boot.
+common_manage_interfaces: false
+common_network_interfaces: []
+# es.:
+#   - name: ens18
+#     start: allow-hotplug          # default; oppure "auto"
+#     stanzas:
+#       - family: inet              # default inet, method default static
+#         address: 10.0.0.11/24
+#         gateway: 10.0.0.1
+#       - family: inet6
+#         address: 2001:db8::11/64
+#         gateway: fe80::1
+#   - name: ens19
+#     stanzas:
+#       - address: 203.0.113.10/29  # niente gateway: la default è su ens18
+#         options: []               # righe extra, es. "mtu 1400"
+
 harden_sysctl: true
 sysctl_enable_ip_forward: false
 

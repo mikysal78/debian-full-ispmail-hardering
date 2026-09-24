@@ -1,0 +1,24 @@
+{{ ansible_managed | comment }}
+# Vedi interfaces(5).
+
+source /etc/network/interfaces.d/*
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+{% for iface in common_network_interfaces %}
+
+{{ iface.start | default('allow-hotplug') }} {{ iface.name }}
+{% for stanza in iface.stanzas %}
+iface {{ iface.name }} {{ stanza.family | default('inet') }} {{ stanza.method | default('static') }}
+{% if stanza.address is defined %}
+	address {{ stanza.address }}
+{% endif %}
+{% if stanza.gateway is defined %}
+	gateway {{ stanza.gateway }}
+{% endif %}
+{% for opzione in stanza.options | default([]) %}
+	{{ opzione }}
+{% endfor %}
+{% endfor %}
+{% endfor %}

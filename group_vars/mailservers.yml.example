@@ -22,6 +22,19 @@ role_mailserver: true
 # ispmail_cert_fullchain_src: "/etc/ssl/acme/mail.example.com.fullchain.pem"
 # ispmail_cert_privkey_src: "/etc/ssl/acme/mail.example.com.key"
 #
+# /etc/network/interfaces dal ruolo common (opt-in, vedi
+# roles/common/defaults/main.yml). Con due interfacce (es. LAN + IP
+# pubblico) metti il "gateway" IPv4 su UNA sola: il secondo fa fallire
+# ifup@<iface> al boot ("RTNETLINK answers: File exists").
+# common_manage_interfaces: true
+# common_network_interfaces:
+#   - name: ens18
+#     stanzas:
+#       - { family: inet, address: 10.0.0.11/24, gateway: 10.0.0.1 }
+#   - name: ens20
+#     stanzas:
+#       - { family: inet, address: 203.0.113.10/29 }
+#
 # Pannello web opzionale per gestire domini/mailbox/alias, su vhost dedicato
 # (non un path su ispmail_fqdn - vedi README per i compromessi: download
 # solo HTTP, nessun checksum pubblicato). Raggiungibile solo dalle reti in

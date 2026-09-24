@@ -1,0 +1,26 @@
+---
+# Su mail01 ens20 (IP pubblico) aveva un secondo "gateway" IPv4 oltre a
+# quello di ens18: a ogni boot ifup provava ad aggiungere una seconda
+# default route, il kernel rispondeva "RTNETLINK answers: File exists" e
+# ifup@ens20.service restava "failed" (l'indirizzo veniva comunque
+# assegnato, ma systemctl --failed era sempre sporco). Da qui la scelta
+# di gestire il file da Ansible con un solo gateway per famiglia.
+#
+# Nessun restart di networking: su un host remoto un errore qui taglia
+# fuori Ansible stesso. La configurazione nuova vale dal prossimo boot
+# (o da un ifdown/ifup manuale dalla console).
+- name: Gestisci /etc/network/interfaces
+  ansible.builtin.template:
+    src: interfaces.j2
+    dest: /etc/network/interfaces
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+    validate: "ifquery --interfaces=%s --list --allow=hotplug"
+  register: common_interfaces_file
+
+- name: Azzera lo stato "failed" delle unit ifup@ (errori ormai corretti nel file)
+  ansible.builtin.command: systemctl reset-failed 'ifup@*.service'
+  when: common_interfaces_file is changed
+  changed_when: true
