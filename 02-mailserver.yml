@@ -43,6 +43,11 @@
 # Disattivabile con ispmail_autoconfig_enabled=false, rieseguibile da solo
 # con --tags autoconfig.
 #
+# Sempre per gli stessi domini, il ruolo ispmail_webmail_sni rende
+# Roundcube raggiungibile anche su https://mail.<dominio> e
+# https://webmail.<dominio> con il certificato del dominio. Disattivabile
+# con ispmail_webmail_sni_enabled=false, rieseguibile con --tags webmail.
+#
 # Opzionale: ispmail_dkim_domains genera le chiavi DKIM per rspamd (che
 # ispmail.sh predispone ma non genera da solo - TODO nello script
 # stesso) e mostra a fine run i record DNS TXT da pubblicare per ogni
@@ -76,6 +81,11 @@
         - ispmail_autoconfig_enabled | default(true)
         - ispmail_sni_domains | default([]) | length > 0
       tags: [autoconfig]
+    - role: ispmail_webmail_sni
+      when:
+        - ispmail_webmail_sni_enabled | default(true)
+        - ispmail_sni_domains | default([]) | length > 0
+      tags: [webmail]
     - role: ispmail_dkim
       when: ispmail_dkim_domains | default([]) | length > 0
     - role: ispmail_postscreen

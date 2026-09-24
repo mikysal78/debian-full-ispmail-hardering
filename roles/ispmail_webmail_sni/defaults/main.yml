@@ -1,0 +1,17 @@
+---
+# Webmail (Roundcube) raggiungibile anche su https://mail.<dominio> e
+# https://webmail.<dominio> per ogni dominio di ispmail_sni_domains, con il
+# certificato di quel dominio (già collegato dal ruolo ispmail_sni) invece
+# di quello di ispmail_fqdn, che il browser rifiuterebbe.
+#
+# Stessa installazione di Roundcube del vhost principale: login, caselle e
+# rubrica sono gli stessi, cambia solo l'indirizzo nel browser. Se
+# ispmail_carddav_enabled, anche Radicale (/radicale/ e /.well-known/
+# carddav|caldav) risponde su questi nomi.
+#
+# Il dominio il cui sni_hostname coincide con ispmail_fqdn è saltato: è
+# già servito dal vhost principale (000-default-le-ssl.conf).
+#
+# Prerequisito, NON gestito qui: i record DNS mail.<dominio> e (se lo
+# vuoi) webmail.<dominio> nella zona del ruolo ansible-dns.
+ispmail_webmail_sni_enabled: true

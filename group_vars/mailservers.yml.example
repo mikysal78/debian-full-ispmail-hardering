@@ -68,6 +68,12 @@ role_mailserver: true
 # DNS autoconfig.<dominio> (CNAME verso sni_hostname). Per spegnerlo:
 # ispmail_autoconfig_enabled: false
 #
+# Sempre per questi domini, Roundcube risponde anche su
+# https://mail.<dominio> e https://webmail.<dominio> con il certificato del
+# dominio (ruolo ispmail_webmail_sni; serve il DNS di webmail.<dominio>).
+# Per spegnerlo:
+# ispmail_webmail_sni_enabled: false
+#
 # Chiavi DKIM per rspamd, una per dominio ospitato (ispmail.sh predispone
 # l'infrastruttura ma non le genera da solo). Generate una sola volta
 # (mai rigenerate ai run successivi, per non invalidare il DNS già
