@@ -36,6 +36,13 @@
 # SNI) per domini ospitati che devono presentare un certificato diverso da
 # ispmail_fqdn - vedi roles/ispmail_sni/defaults/main.yml.
 #
+# Per gli stessi domini di ispmail_sni_domains il ruolo ispmail_autoconfig
+# pubblica https://autoconfig.<dominio>/mail/config-v1.1.xml, così i client
+# (Thunderbird & co.) propongono da soli mail.<dominio> e l'indirizzo
+# completo come utente; richiede il record DNS autoconfig.<dominio>.
+# Disattivabile con ispmail_autoconfig_enabled=false, rieseguibile da solo
+# con --tags autoconfig.
+#
 # Opzionale: ispmail_dkim_domains genera le chiavi DKIM per rspamd (che
 # ispmail.sh predispone ma non genera da solo - TODO nello script
 # stesso) e mostra a fine run i record DNS TXT da pubblicare per ogni
@@ -64,6 +71,11 @@
       tags: [admin]
     - role: ispmail_sni
       when: ispmail_sni_domains | default([]) | length > 0
+    - role: ispmail_autoconfig
+      when:
+        - ispmail_autoconfig_enabled | default(true)
+        - ispmail_sni_domains | default([]) | length > 0
+      tags: [autoconfig]
     - role: ispmail_dkim
       when: ispmail_dkim_domains | default([]) | length > 0
     - role: ispmail_postscreen

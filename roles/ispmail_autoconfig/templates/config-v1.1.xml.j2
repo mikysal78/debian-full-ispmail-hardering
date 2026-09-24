@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+{{ ansible_managed | comment(decoration='  ') }}
+-->
+<clientConfig version="1.1">
+  <emailProvider id="{{ item.domain }}">
+    <domain>{{ item.domain }}</domain>
+    <displayName>{{ item.domain }}</displayName>
+    <displayShortName>{{ item.domain }}</displayShortName>
+
+    <!-- %EMAILADDRESS%: Dovecot e Postfix autenticano con l'indirizzo
+         completo, non con la sola parte prima della "@" -->
+    <incomingServer type="imap">
+      <hostname>{{ item.sni_hostname }}</hostname>
+      <port>993</port>
+      <socketType>SSL</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+    </incomingServer>
+    <incomingServer type="imap">
+      <hostname>{{ item.sni_hostname }}</hostname>
+      <port>143</port>
+      <socketType>STARTTLS</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+    </incomingServer>
+{% if mail_enable_pop3 | default(false) %}
+    <incomingServer type="pop3">
+      <hostname>{{ item.sni_hostname }}</hostname>
+      <port>995</port>
+      <socketType>SSL</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+      <pop3>
+        <leaveMessagesOnServer>true</leaveMessagesOnServer>
+      </pop3>
+    </incomingServer>
+{% endif %}
+
+    <outgoingServer type="smtp">
+      <hostname>{{ item.sni_hostname }}</hostname>
+      <port>465</port>
+      <socketType>SSL</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+    </outgoingServer>
+    <outgoingServer type="smtp">
+      <hostname>{{ item.sni_hostname }}</hostname>
+      <port>587</port>
+      <socketType>STARTTLS</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+    </outgoingServer>
+  </emailProvider>
+</clientConfig>

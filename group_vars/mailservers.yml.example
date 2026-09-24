@@ -61,6 +61,13 @@ role_mailserver: true
 #     sni_hostname: "mail.otherdomain.com"
 #     cert_name: "otherdomain.com"   # default: = domain
 #
+# Per ogni dominio di ispmail_sni_domains viene pubblicato anche
+# https://autoconfig.<dominio>/mail/config-v1.1.xml (ruolo
+# ispmail_autoconfig): i client propongono da soli sni_hostname come
+# server IMAP/SMTP e l'indirizzo completo come utente. Serve il record
+# DNS autoconfig.<dominio> (CNAME verso sni_hostname). Per spegnerlo:
+# ispmail_autoconfig_enabled: false
+#
 # Chiavi DKIM per rspamd, una per dominio ospitato (ispmail.sh predispone
 # l'infrastruttura ma non le genera da solo). Generate una sola volta
 # (mai rigenerate ai run successivi, per non invalidare il DNS già
