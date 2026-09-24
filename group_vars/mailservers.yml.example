@@ -33,7 +33,13 @@ role_mailserver: true
 #       - { family: inet, address: 10.0.0.11/24, gateway: 10.0.0.1 }
 #   - name: ens20
 #     stanzas:
-#       - { family: inet, address: 203.0.113.10/29 }
+#       - family: inet
+#         address: 203.0.113.10/29
+#         # Se il router annuncia IPv6 anche su questa interfaccia ma non
+#         # lo vuoi (es. stesso /64 della LAN = routing asimmetrico):
+#         # default.accept_ra=0 in sysctl non basta per le NIC presenti al boot.
+#         options:
+#           - "pre-up sysctl -q -w net.ipv6.conf.$IFACE.accept_ra=0 net.ipv6.conf.$IFACE.autoconf=0"
 #
 # Pannello web opzionale per gestire domini/mailbox/alias, su vhost dedicato
 # (non un path su ispmail_fqdn - vedi README per i compromessi: download
