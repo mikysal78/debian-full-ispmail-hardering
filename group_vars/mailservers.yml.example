@@ -67,7 +67,9 @@ role_mailserver: true
 # ispmail_autoconfig): i client propongono da soli sni_hostname come
 # server IMAP/SMTP e l'indirizzo completo come utente. Servono i record
 # DNS autoconfig.<dominio> e autodiscover.<dominio> (CNAME verso
-# sni_hostname). Per spegnerlo:
+# sni_hostname). Per iPhone/iPad c'è la pagina
+# https://autoconfig.<dominio>/iphone, che scarica un profilo
+# .mobileconfig già compilato. Per spegnere tutto:
 # ispmail_autoconfig_enabled: false
 #
 # Sempre per questi domini, Roundcube risponde anche su

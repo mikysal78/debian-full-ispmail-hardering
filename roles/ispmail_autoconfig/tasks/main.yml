@@ -43,6 +43,17 @@
   loop_control:
     label: "{{ item.domain }}"
 
+- name: Genera la pagina del profilo iPhone (.mobileconfig) di ogni dominio
+  ansible.builtin.template:
+    src: iphone.php.j2
+    dest: "{{ ispmail_autoconfig_root }}/{{ item.domain }}/iphone.php"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ ispmail_sni_domains }}"
+  loop_control:
+    label: "{{ item.domain }}"
+
 - name: Configura i vhost autoconfig.<dominio> in Apache
   ansible.builtin.template:
     src: apache-autoconfig.conf.j2

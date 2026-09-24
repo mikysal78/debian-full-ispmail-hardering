@@ -1,8 +1,9 @@
 {{ ansible_managed | comment }}
 # Un vhost per dominio: serve solo /mail/config-v1.1.xml (Thunderbird &
-# co.) e /autodiscover/autodiscover.xml (Outlook), con il certificato del
-# dominio (il vhost principale ha quello di ispmail_fqdn, che il client
-# rifiuterebbe per autoconfig.<altro dominio>).
+# co.), /autodiscover/autodiscover.xml (Outlook) e /iphone (profilo
+# .mobileconfig per Apple), con il certificato del dominio (il vhost
+# principale ha quello di ispmail_fqdn, che il client rifiuterebbe per
+# autoconfig.<altro dominio>).
 {% for d in ispmail_sni_domains %}
 
 <VirtualHost *:443>
@@ -18,6 +19,7 @@
 	# Autodiscover.xml: la risposta dipende dall'indirizzo, quindi è PHP
 	RewriteEngine On
 	RewriteRule ^/autodiscover/autodiscover\.xml$ /autodiscover/autodiscover.php [NC,L]
+	RewriteRule ^/(iphone|ipad|apple)/?$ /iphone.php [NC,L]
 	<Directory {{ ispmail_autoconfig_root }}/{{ d.domain }}>
 		Options None
 		AllowOverride None

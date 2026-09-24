@@ -12,7 +12,14 @@
 #   https://autodiscover.<dominio>/autodiscover/autodiscover.xml
 # e riceve IMAP 993 e SMTP 465 con l'indirizzo completo come utente. Il
 # "nuovo Outlook" e Outlook mobile passano dai server Microsoft e possono
-# ignorarlo. I profili .mobileconfig di Apple non sono gestiti qui.
+# ignorarlo.
+#
+# Per iPhone/iPad/Mac (Apple non ha un autoconfig della posta) la pagina
+#   https://autoconfig.<dominio>/iphone
+# da aprire con Safari chiede nome e indirizzo e scarica un profilo
+# .mobileconfig già compilato (IMAP 993, SMTP 465, utente = indirizzo
+# completo; la password la chiede l'iPhone). Non è firmato: iOS lo mostra
+# come "non verificato", ma si installa lo stesso.
 #
 # Un vhost HTTPS autoconfig.<dominio> per ogni voce di ispmail_sni_domains,
 # con il certificato del dominio già collegato dal ruolo ispmail_sni; come
@@ -24,3 +31,9 @@
 ispmail_autoconfig_enabled: true
 
 ispmail_autoconfig_root: "/var/www/autoconfig"
+
+# Aggiunge al profilo Apple anche rubrica e calendario (Radicale, personali
+# e condivisi del dominio). Richiede che Radicale risponda su
+# mail.<dominio>: vale per il dominio principale e, con il ruolo
+# ispmail_webmail_sni, per gli altri.
+ispmail_autoconfig_apple_dav: "{{ ispmail_carddav_enabled | default(false) }}"
