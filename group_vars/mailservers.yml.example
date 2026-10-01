@@ -60,6 +60,9 @@ role_mailserver: true
 #   - domain: "otherdomain.com"
 #     sni_hostname: "mail.otherdomain.com"
 #     cert_name: "otherdomain.com"   # default: = domain
+#     # Nomi in più con lo stesso certificato. Default: imap., smtp., pop3.,
+#     # pop. e il dominio stesso (ispmail_sni_alias_prefixes nel ruolo)
+#     sni_aliases: ["imap.otherdomain.com", "smtp.otherdomain.com"]
 #
 # Per ogni dominio di ispmail_sni_domains viene pubblicato anche
 # https://autoconfig.<dominio>/mail/config-v1.1.xml e, per Outlook,

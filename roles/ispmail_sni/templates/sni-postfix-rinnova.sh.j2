@@ -1,0 +1,51 @@
+#!/bin/sh
+{{ ansible_managed | comment }}
+# Tiene allineati ai certificati in {{ ispmail_sni_cert_base }} i file che
+# Postfix usa per l'SNI. Dovecot legge i certificati tramite link e li vede
+# subito dopo un reload; Postfix invece vuole un unico file chiave+catena per
+# dominio, che poi "postmap -F" copia DENTRO la mappa: al rinnovo nessuno dei
+# due si aggiorna da solo. E' successo il 29/09/2026: la mappa conteneva
+# ancora i certificati scaduti, i client che chiedevano mail.romaclubmatera.it
+# ricevevano un certificato scaduto e il sito non riusciva piu' a mandare mail
+# (auguri di compleanno, promemoria, avvisi delle prenotazioni).
+#
+# Lo lancia sni-postfix-rinnova.path quando cambia un certificato, e
+# sni-postfix-rinnova.timer una volta al giorno come rete di sicurezza.
+# Non fa niente se i file sono gia' aggiornati.
+set -eu
+
+cambiato=0
+umask 027
+{% for d in ispmail_sni_domains %}
+# Chiave e certificato arrivano come due file separati: se lo script parte
+# fra la scrittura dell'uno e dell'altro, la coppia non corrisponde e
+# Postfix fallirebbe l'handshake TLS di questo dominio. In quel caso salta:
+# il .path lo rilancia quando arriva anche il secondo file.
+chiave=$(openssl pkey -in "{{ ispmail_sni_link_dir }}/{{ d.domain }}/privkey.pem" -pubout 2>/dev/null | sha256sum)
+cert=$(openssl x509 -in "{{ ispmail_sni_link_dir }}/{{ d.domain }}/fullchain.pem" -noout -pubkey 2>/dev/null | sha256sum)
+if [ "$chiave" != "$cert" ]; then
+	logger -t sni-postfix-rinnova "{{ d.domain }}: chiave e certificato non corrispondono (rinnovo in corso?), salto"
+else
+nuovo=$(mktemp)
+cat "{{ ispmail_sni_link_dir }}/{{ d.domain }}/privkey.pem" "{{ ispmail_sni_link_dir }}/{{ d.domain }}/fullchain.pem" > "$nuovo"
+if ! cmp -s "$nuovo" "{{ ispmail_sni_chain_dir }}/{{ d.domain }}.pem"; then
+	install -o root -g postfix -m 0640 "$nuovo" "{{ ispmail_sni_chain_dir }}/{{ d.domain }}.pem"
+	logger -t sni-postfix-rinnova "aggiornato il certificato SNI di {{ d.domain }}"
+	cambiato=1
+fi
+rm -f "$nuovo"
+fi
+{% endfor %}
+
+# La mappa va ricostruita anche se i file erano gia' giusti ma la mappa e'
+# piu' vecchia di loro (per esempio dopo un run di Ansible interrotto).
+for f in {{ ispmail_sni_chain_dir }}/*.pem; do
+	[ "$f" -nt "{{ ispmail_sni_map }}.db" ] && cambiato=1
+done
+
+if [ "$cambiato" = 1 ]; then
+	postmap -F "{{ ispmail_sni_map }}"
+	systemctl reload postfix
+	systemctl reload dovecot
+	logger -t sni-postfix-rinnova "mappa SNI ricostruita, postfix e dovecot ricaricati"
+fi

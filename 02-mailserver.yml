@@ -34,7 +34,9 @@
 #
 # Opzionale: ispmail_sni_domains popola un certificato TLS dedicato (via
 # SNI) per domini ospitati che devono presentare un certificato diverso da
-# ispmail_fqdn - vedi roles/ispmail_sni/defaults/main.yml.
+# ispmail_fqdn - vedi roles/ispmail_sni/defaults/main.yml. Rieseguibile da
+# solo con --tags sni (anche dopo il rinnovo dei certificati, per
+# rigenerare i chain file di Postfix).
 #
 # Per gli stessi domini di ispmail_sni_domains il ruolo ispmail_autoconfig
 # pubblica https://autoconfig.<dominio>/mail/config-v1.1.xml, così i client
@@ -80,6 +82,7 @@
       tags: [admin]
     - role: ispmail_sni
       when: ispmail_sni_domains | default([]) | length > 0
+      tags: [sni]
     - role: ispmail_autoconfig
       when:
         - ispmail_autoconfig_enabled | default(true)

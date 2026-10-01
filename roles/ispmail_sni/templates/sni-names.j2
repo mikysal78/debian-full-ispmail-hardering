@@ -1,0 +1,12 @@
+{#- Tutti i nomi TLS (SNI) di un dominio d: sni_hostname, poi sni_aliases
+    se definiti, altrimenti <prefisso>.<dominio> per ogni voce di
+    ispmail_sni_alias_prefixes più il dominio stesso. Usato con
+    {% import %} da postfix-sni-map.j2 e dovecot-sni.conf.j2. -#}
+{%- macro sni_names(d) -%}
+{%- if d.sni_aliases is defined -%}
+{%- set extra = d.sni_aliases -%}
+{%- else -%}
+{%- set extra = (ispmail_sni_alias_prefixes | map('regex_replace', '^(.+)$', '\\1.' ~ d.domain) | list) + [d.domain] -%}
+{%- endif -%}
+{{ ([d.sni_hostname] + extra) | unique | join(' ') }}
+{%- endmacro -%}

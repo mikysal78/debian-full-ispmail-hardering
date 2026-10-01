@@ -1,0 +1,7 @@
+{{ ansible_managed | comment }}
+[Unit]
+Description=Allinea la mappa SNI di Postfix ai certificati rinnovati
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sni-postfix-rinnova

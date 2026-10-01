@@ -1,4 +1,7 @@
 {{ ansible_managed | comment }}
+{% import 'sni-names.j2' as sni with context %}
 {% for d in ispmail_sni_domains %}
-{{ d.sni_hostname }}	{{ ispmail_sni_chain_dir }}/{{ d.domain }}.pem
+{% for name in sni.sni_names(d).split() %}
+{{ name }}	{{ ispmail_sni_chain_dir }}/{{ d.domain }}.pem
+{% endfor %}
 {% endfor %}

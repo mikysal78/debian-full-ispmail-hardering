@@ -1,0 +1,13 @@
+{{ ansible_managed | comment }}
+[Unit]
+Description=Certificati dei domini SNI: al rinnovo riallinea Postfix
+
+[Path]
+{% for d in ispmail_sni_domains %}
+PathChanged={{ ispmail_sni_cert_base }}/{{ d.cert_name | default(d.domain) }}.fullchain.pem
+PathChanged={{ ispmail_sni_cert_base }}/{{ d.cert_name | default(d.domain) }}.key
+{% endfor %}
+Unit=sni-postfix-rinnova.service
+
+[Install]
+WantedBy=multi-user.target

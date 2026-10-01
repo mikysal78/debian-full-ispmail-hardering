@@ -8,6 +8,7 @@
 #   - domain: "romaclubmatera.it"       # nome del dominio (usato per i path locali)
 #     sni_hostname: "mail.romaclubmatera.it"  # hostname che i client richiedono via SNI
 #     cert_name: "romaclubmatera.it"    # nome dei file sotto /etc/ssl/acme/ (default: = domain)
+#     sni_aliases: ["imap.romaclubmatera.it"]  # opzionale, vedi sotto
 #
 # Prerequisiti per ogni dominio in lista, NON gestiti da questo ruolo:
 #   - un certificato per quel dominio già emesso dal ruolo ansible-dns in
@@ -15,6 +16,16 @@
 #     usata da roles/ispmail per il certificato principale)
 #   - un record DNS (A/AAAA/CNAME) di sni_hostname che punti a questo host
 ispmail_sni_domains: []
+
+# Nomi in più che ricevono il certificato del dominio, oltre a
+# sni_hostname: i client configurati a mano usano spesso imap.<dominio> o
+# smtp.<dominio> (e i record SRV possono puntarci), e senza una voce SNI
+# Postfix e Dovecot risponderebbero con il certificato di ispmail_fqdn.
+# Di default <prefisso>.<dominio> per ogni prefisso qui sotto, più il
+# dominio stesso; una voce di ispmail_sni_domains con "sni_aliases" usa
+# invece esattamente quella lista. Il certificato deve coprire questi nomi
+# (wildcard o SAN), altrimenti il client lo rifiuta comunque.
+ispmail_sni_alias_prefixes: ["imap", "smtp", "pop3", "pop"]
 
 ispmail_sni_cert_base: "/etc/ssl/acme"
 # Path stabili (link, si aggiornano da soli ai rinnovi) usati direttamente

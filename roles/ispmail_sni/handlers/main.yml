@@ -17,3 +17,7 @@
   ansible.builtin.service:
     name: dovecot
     state: restarted
+
+- name: systemd daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true
