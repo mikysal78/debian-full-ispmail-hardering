@@ -1,0 +1,50 @@
+---
+- name: Distribuisci gli header_checks della posta autenticata
+  ansible.builtin.template:
+    src: submission_header_cleanup.j2
+    dest: /etc/postfix/submission_header_cleanup
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload postfix
+
+- name: Leggi la configurazione attuale di master.cf
+  ansible.builtin.command: postconf -M
+  register: ispmail_submission_privacy_master
+  changed_when: false
+
+- name: Leggi i parametri -o attuali di master.cf
+  ansible.builtin.command: postconf -P
+  register: ispmail_submission_privacy_params
+  changed_when: false
+
+# Un cleanup separato con i suoi header_checks: la posta della porta 25
+# continua a passare dal cleanup normale, con i Received intatti.
+- name: Definisci il servizio cleanup dedicato alla submission
+  ansible.builtin.command: >-
+    postconf -Me "{{ ispmail_submission_privacy_cleanup_service }}/unix={{
+    ispmail_submission_privacy_cleanup_service }} unix n - y - 0 cleanup"
+  when: >-
+    ispmail_submission_privacy_master.stdout is not
+    search('^' ~ ispmail_submission_privacy_cleanup_service ~ '\s+unix', multiline=True)
+  notify: reload postfix
+
+- name: Collega gli header_checks al cleanup dedicato
+  ansible.builtin.command: >-
+    postconf -Pe "{{ ispmail_submission_privacy_cleanup_service
+    }}/unix/header_checks=regexp:/etc/postfix/submission_header_cleanup"
+  when: >-
+    (ispmail_submission_privacy_cleanup_service ~
+    '/unix/header_checks = regexp:/etc/postfix/submission_header_cleanup')
+    not in ispmail_submission_privacy_params.stdout_lines
+  notify: reload postfix
+
+- name: Fai usare il cleanup dedicato ai servizi submission
+  ansible.builtin.command: >-
+    postconf -Pe "{{ item }}/cleanup_service_name={{
+    ispmail_submission_privacy_cleanup_service }}"
+  loop: "{{ ispmail_submission_privacy_services }}"
+  when: >-
+    (item ~ '/cleanup_service_name = ' ~ ispmail_submission_privacy_cleanup_service)
+    not in ispmail_submission_privacy_params.stdout_lines
+  notify: reload postfix

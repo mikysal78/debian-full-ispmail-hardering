@@ -71,6 +71,13 @@
 # calendario è per client esterni (smartphone/Thunderbird) su
 # https://<ispmail_fqdn>/radicale/ - vedi roles/ispmail_carddav/defaults/
 # main.yml. Rieseguibile da solo con --tags carddav.
+#
+# Di default il ruolo ispmail_submission_privacy toglie dalla posta
+# inviata dagli utenti autenticati (porte 587/465, Roundcube compreso)
+# l'intestazione Received con IP e nome del client, come fanno i grandi
+# provider; la porta 25 non viene toccata. Disattivabile con
+# ispmail_submission_privacy_enabled=false, rieseguibile con
+# --tags privacy - vedi roles/ispmail_submission_privacy/defaults/main.yml.
 # =============================================================================
 - name: Installa il mail server con ispmail.sh
   hosts: mailservers
@@ -101,3 +108,6 @@
     - role: ispmail_carddav
       when: ispmail_carddav_enabled | default(false)
       tags: [carddav]
+    - role: ispmail_submission_privacy
+      when: ispmail_submission_privacy_enabled | default(true)
+      tags: [privacy]

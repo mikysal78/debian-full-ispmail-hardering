@@ -1,0 +1,6 @@
+{{ ansible_managed | comment }}
+# header_checks del servizio {{ ispmail_submission_privacy_cleanup_service }}:
+# valgono solo per la posta inviata da utenti autenticati (submission).
+{% for rule in ispmail_submission_privacy_header_checks %}
+{{ rule }}
+{% endfor %}

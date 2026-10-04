@@ -1,0 +1,32 @@
+---
+# Privacy dei client sulle porte submission (587) e submissions (465): la
+# posta inviata da un utente autenticato (client di posta o Roundcube)
+# esce senza l'intestazione Received che Postfix aggiunge alla ricezione,
+# quella con IP e nome host del client ("from pc-mario [10.x.x.x] ...
+# with ESMTPSA"). Il destinatario vede solo i passaggi tra server, come
+# coi grandi provider. L'IP del client resta nei log di Postfix
+# (postfix/submission) e rspamd lo vede comunque (gira come milter prima
+# del cleanup), quindi antispam e DKIM non cambiano.
+#
+# La porta 25 (posta in arrivo da internet) NON viene toccata: le
+# submission usano un servizio cleanup dedicato con i suoi header_checks.
+#
+# Attivo di default; per spegnerlo ispmail_submission_privacy_enabled=false
+# in group_vars/host_vars (vedi 02-mailserver.yml).
+
+# Nome del servizio cleanup dedicato in master.cf
+ispmail_submission_privacy_cleanup_service: "submission-cleanup"
+
+# Servizi master.cf (nome/tipo) che usano il cleanup dedicato
+ispmail_submission_privacy_services:
+  - "submission/inet"
+  - "submissions/inet"
+
+# Regole regexp (header_checks) applicate solo alla posta autenticata.
+# Di default toglie solo il Received del client (riconoscibile da "with
+# ESMTPSA", cioè SMTP autenticato). Si possono aggiungere altre
+# intestazioni da nascondere, per esempio:
+#   - "/^User-Agent:/ IGNORE"
+#   - "/^X-Mailer:/ IGNORE"
+ispmail_submission_privacy_header_checks:
+  - "/^Received:.*with ESMTPSA/ IGNORE"

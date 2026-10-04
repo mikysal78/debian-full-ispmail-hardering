@@ -102,3 +102,9 @@ role_mailserver: true
 # https://<ispmail_fqdn>/radicale/ - vedi
 # roles/ispmail_carddav/defaults/main.yml.
 # ispmail_carddav_enabled: true
+#
+# La posta inviata dagli utenti autenticati (porte 587/465, Roundcube
+# compreso) esce senza l'intestazione Received con IP e nome del client:
+# il destinatario vede solo i passaggi tra server. Attivo di default, per
+# spegnerlo - vedi roles/ispmail_submission_privacy/defaults/main.yml:
+# ispmail_submission_privacy_enabled: false
