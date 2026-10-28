@@ -20,3 +20,13 @@
     name: unattended-upgrades
     enabled: true
     state: started
+
+- name: Configura needrestart (riavvio dei servizi dopo gli aggiornamenti)
+  ansible.builtin.copy:
+    dest: /etc/needrestart/conf.d/50-hardening.conf
+    content: |
+      # Gestito da Ansible (ruolo common)
+      $nrconf{restart} = '{{ needrestart_restart_mode }}';
+    owner: root
+    group: root
+    mode: "0644"

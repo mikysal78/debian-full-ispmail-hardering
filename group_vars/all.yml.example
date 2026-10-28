@@ -80,6 +80,9 @@ harden_apparmor: true
 harden_unattended_upgrades: true
 unattended_upgrades_reboot_automatic: false
 unattended_upgrades_reboot_time: "03:30"
+# "a" = needrestart riavvia da solo i servizi dopo gli aggiornamenti,
+# "l" = li elenca soltanto (Apache resterebbe col vecchio PHP).
+needrestart_restart_mode: "a"
 
 # --- Tempo (systemd-timesyncd) ---------------------------------------------
 harden_ntp: true

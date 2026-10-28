@@ -76,6 +76,11 @@ harden_apparmor: true
 harden_unattended_upgrades: true
 unattended_upgrades_reboot_automatic: false
 unattended_upgrades_reboot_time: "03:30"
+# needrestart dopo gli aggiornamenti: "a" riavvia da solo i servizi che usano
+# librerie vecchie, "l" si limita a elencarli. Con "l" un aggiornamento di PHP
+# lascia Apache col vecchio mod_php e al primo reload le estensioni non si
+# caricano più (webmail in errore 500).
+needrestart_restart_mode: "a"
 
 harden_ntp: true
 ntp_servers:
