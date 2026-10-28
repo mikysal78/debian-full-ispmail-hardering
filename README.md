@@ -16,7 +16,9 @@ group_vars/mx_backup.yml.example   # variabili del gruppo [mx_backup] (opzionale
 inventory/hosts.ini.example         # inventario di esempio
 roles/
   common/      utenti, SSH, sysctl, moduli kernel, PAM, auditd, AppArmor,
-               aggiornamenti automatici, NTP, journald, banner legale
+               aggiornamenti automatici + needrestart, NTP, journald,
+               banner legale, MOTD dinamico; opzionali /etc/hosts e
+               /etc/network/interfaces
   firewall/    nftables (default-deny in ingresso)
   fail2ban/    ban automatico su SSH e, se attivi, nginx/postfix/dovecot
   webserver/   nginx: header di sicurezza, TLS moderno, no listing
@@ -25,6 +27,12 @@ roles/
   ispmail/     scarica ed esegue ispmail.sh (usato da 02-mailserver.yml)
   ispmail_admin/ pannello web opzionale per domini/mailbox/alias (usato da 02-mailserver.yml)
   ispmail_sni/ certificati TLS dedicati per domini extra via SNI (usato da 02-mailserver.yml)
+  ispmail_autoconfig/  autoconfig Thunderbird, autodiscover Outlook, profilo iPhone per ogni dominio SNI
+  ispmail_webmail_sni/ Roundcube anche su mail.<dominio> e webmail.<dominio> per ogni dominio SNI
+  ispmail_dkim/        genera le chiavi DKIM per rspamd
+  ispmail_postscreen/  postscreen + DNSBL sulla porta 25, unbound come resolver locale
+  ispmail_carddav/     Radicale (CardDAV/CalDAV) + plugin RCMCardDAV in Roundcube
+  ispmail_submission_privacy/ niente Received con l'IP del client nella posta autenticata
   mx_backup/   Postfix relay-only per un MX secondario (usato da 03-mx-backup.yml, opzionale)
 ```
 
@@ -119,7 +127,8 @@ il flag direttamente in `host_vars/<nome-host>.yml`. Stesso discorso per
 `role_database` (ruolo `database`, MariaDB) e `group_vars/dbservers.yml`.
 
 Il ruolo `firewall` legge questi stessi flag per aprire automaticamente
-le porte giuste (80/443 per il web, 25/465/587/143/993/995 per la mail).
+le porte giuste (80/443 per il web, 25/465/587/143/993 per la mail,
+995 solo con `mail_enable_pop3: true`).
 
 ### Installare la posta con ispmail.sh (02-mailserver.yml)
 
@@ -280,14 +289,25 @@ base all'hostname richiesto dal client. Se il certificato manca ancora in
 `/etc/ssl/acme/`, il ruolo si ferma con un errore esplicito invece di
 proseguire con una configurazione rotta.
 
-**Limite da conoscere**: a differenza del certificato principale (un
-link, si aggiorna da solo ai rinnovi), Postfix per l'SNI richiede un
-unico file con chiave privata + certificato concatenati, che questo
-ruolo *rigenera* a ogni run ma **non si aggiorna automaticamente** al
-rinnovo del certificato lato `ansible-dns`. Rilancia `ansible-playbook
-02-mailserver.yml` dopo ogni rinnovo di questi domini extra, oppure aggiungi
-una chiamata a questo ruolo nel `reloadcmd`/deploy script di
-`ansible-dns` per quei domini specifici.
+Oltre a `sni_hostname`, ricevono il certificato del dominio anche
+`imap.`, `smtp.`, `pop3.` e `pop.<dominio>` più il dominio stesso
+(`ispmail_sni_alias_prefixes`); con `sni_aliases` su una voce indichi
+invece la lista esatta. Il certificato deve coprire questi nomi
+(wildcard o SAN).
+
+**Rinnovi**: Dovecot legge i certificati tramite link, che seguono da
+soli i rinnovi. Postfix invece vuole un unico file chiave+catena per
+dominio, che `postmap -F` copia dentro la mappa: lo riallinea lo script
+`/usr/local/sbin/sni-postfix-rinnova`, lanciato da
+`sni-postfix-rinnova.path` quando cambia un certificato in
+`/etc/ssl/acme/` e da `sni-postfix-rinnova.timer` ogni giorno alle 4:40
+come rete di sicurezza. Se chiave e certificato non corrispondono
+(rinnovo a metà) salta il dominio e riprova al file successivo. Log:
+`journalctl -t sni-postfix-rinnova`.
+
+I domini di `ispmail_sni_domains` sono anche quelli per cui i ruoli
+`ispmail_autoconfig` e `ispmail_webmail_sni` (vedi sotto) creano i vhost
+dedicati.
 
 ### Chiavi DKIM per rspamd
 
@@ -311,6 +331,85 @@ da pubblicare (`<selector>._domainkey.<dominio>`) — copialo nella zona
 DNS di quel dominio (via `ansible-dns` o a mano). Se lo perdi, lo trovi
 di nuovo sul server in
 `/var/lib/rspamd/dkim/<dominio>.<selettore>.dns.txt`.
+
+### Caselle: quota, cartelle, POP3S, mail di benvenuto
+
+Il ruolo `ispmail`, dopo lo script, completa la configurazione delle
+caselle:
+- **quota di default** `ispmail_quota_default` (sintassi Dovecot, es.
+  `3G`) per tutte le caselle con `quota=0` nel DB; il valore in byte
+  nella colonna `virtual_users.quota` (da ISPmail Admin) la sovrascrive
+  per la singola casella;
+- **cartelle standard** Drafts, Sent e Archive create e sottoscritte al
+  primo login con il flag SPECIAL-USE, accanto a Junk e Trash di
+  ispmail.sh (svuotate dopo 30 giorni);
+- **POP3S** (995) in Dovecot solo se `mail_enable_pop3: true`; il POP3 in
+  chiaro (110) resta sempre spento;
+- **log di debug di Sieve** spento di default (`ispmail_sieve_debug`);
+- **mail di benvenuto**: dopo aver creato una casella, sul server
+  ```bash
+  ispmail-benvenuto nuovo.utente@tuodominio.it
+  ```
+  invia il testo di `/etc/ispmail/benvenuto.txt`, personalizzato con
+  indirizzo e dominio.
+
+### Configurazione automatica dei client (ispmail_autoconfig)
+
+Attivo di default (`ispmail_autoconfig_enabled`) per ogni dominio di
+`ispmail_sni_domains`, con un vhost HTTPS `autoconfig.<dominio>`:
+- `https://autoconfig.<dominio>/mail/config-v1.1.xml` per Thunderbird,
+  K-9/Thunderbird per Android, Evolution, KMail;
+- `autodiscover.<dominio>` per Outlook desktop (IMAP 993 + SMTP 465);
+- `https://autoconfig.<dominio>/iphone` da aprire con Safari: scarica un
+  profilo `.mobileconfig` già compilato per iPhone/iPad/Mac (non firmato,
+  iOS lo segnala come "non verificato"), con rubrica e calendario se
+  CardDAV è attivo.
+
+In tutti i casi l'utente proposto è l'indirizzo completo, come vuole
+Dovecot. Prerequisito non gestito qui: i record DNS `autoconfig.` e
+`autodiscover.<dominio>`.
+
+### Webmail su ogni dominio (ispmail_webmail_sni)
+
+Attivo di default (`ispmail_webmail_sni_enabled`): Roundcube risponde
+anche su `https://mail.<dominio>` e `https://webmail.<dominio>` per ogni
+dominio di `ispmail_sni_domains`, con il certificato di quel dominio. È
+la stessa installazione del vhost principale, cambia solo l'indirizzo
+nel browser. Il dominio il cui `sni_hostname` coincide con `ispmail_fqdn`
+è saltato (lo serve già il vhost di ispmail.sh). Servono i record DNS.
+
+### Filtro DNSBL sulla porta 25 (ispmail_postscreen)
+
+`ispmail_postscreen_enabled: true` mette postscreen davanti alla porta
+25: ogni connessione viene confrontata con le DNSBL (Spamhaus zen,
+Mailspike, SpamCop, con DNSWL come compensazione) e con il test del
+banner, prima di occupare un processo smtpd e arrivare a rspamd. Le
+porte submission (587/465) non passano da qui. Liste, pesi e soglia sono
+in `roles/ispmail_postscreen/defaults/main.yml`; per un periodo di sola
+osservazione metti le azioni a `"ignore"`.
+
+Il ruolo installa anche **unbound** come resolver ricorsivo locale e
+punta `/etc/resolv.conf` a `127.0.0.1`: Spamhaus non risponde ai
+resolver pubblici (8.8.8.8, 1.1.1.1).
+
+### Rubriche e calendari (ispmail_carddav)
+
+`ispmail_carddav_enabled: true` installa **Radicale** (CardDAV/CalDAV)
+dietro Apache su `https://<ispmail_fqdn>/radicale/`, con le stesse
+credenziali della casella: rubrica e calendario personali per ogni
+casella, più rubrica e calendario condivisi per ogni dominio. In
+Roundcube il plugin RCMCardDAV mostra un'unica rubrica; il calendario si
+usa solo da client esterni (smartphone, Thunderbird), perché Debian non
+ha un plugin calendario per Roundcube.
+
+### Privacy della posta inviata (ispmail_submission_privacy)
+
+Attivo di default: la posta inviata da utenti autenticati (porte
+587/465, client o Roundcube) esce senza l'intestazione `Received` con IP
+e nome del PC del mittente. L'IP resta nei log di Postfix e rspamd lo
+vede comunque, quindi antispam e DKIM non cambiano. La porta 25 non è
+toccata. Altre intestazioni da togliere (es. `User-Agent`) si aggiungono
+in `ispmail_submission_privacy_header_checks`.
 
 ## MX secondario / backup (03-mx-backup.yml, opzionale)
 
@@ -388,9 +487,10 @@ ansible-playbook 01-hardening.yml --check --diff       # dry-run
   `webserver_domains`. Per la mail, sostituisci i path
   `smtpd_tls_cert_file`/`smtpd_tls_key_file` in
   `roles/mailserver/templates/main.cf.j2` con i tuoi certificati.
-- **DKIM/SPF/DMARC**: il ruolo mailserver installa `opendkim` ma non lo
-  configura (chiavi/domini sono specifici per ognuno): vanno impostati a
-  mano o con un ruolo dedicato prima di considerare la mail "pronta".
+- **DKIM/SPF/DMARC**: con ispmail.sh le chiavi DKIM le genera il ruolo
+  `ispmail_dkim` (vedi sopra); i record SPF e DMARC vanno comunque
+  pubblicati nel DNS di ogni dominio. Il ruolo `mailserver` alternativo
+  installa invece `opendkim` senza configurarlo.
 - **PAM e `pam-auth-update`**: `roles/common/tasks/pam.yml` modifica
   direttamente `/etc/pam.d/common-auth` e `common-password` per
   aggiungere `pam_faillock`/`pam_pwquality`. Se in futuro lanci
